@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getDate } from 'date-fns';
 import { User, VacationPeriod } from '../types';
 import { generateCalendarForYear, getMonthName, isDateInRange } from '../utils/dateUtils';
+import { isRussianHoliday } from '../utils/holidayUtils';
 
 interface CalendarProps {
   year: number;
@@ -162,13 +163,24 @@ const Calendar: React.FC<CalendarProps> = ({
   const renderDayCell = (date: Date) => {
     const day = getDate(date);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const isHoliday = isRussianHoliday(date);
     const vacationsForDate = getVacationsForDate(date);
     const hasVacations = vacationsForDate.length > 0;
     const isPreviewRange = isInPreviewRange(date);
     const isStart = isStartDate(date);
 
     // Определяем стили для ячейки
-    let classNames = `calendar-day ${isWeekend ? 'weekend' : ''}`;
+    let classNames = `calendar-day`;
+
+    // Добавляем класс weekend для выходных или праздничных дней
+    if (isWeekend) {
+      classNames += ' weekend';
+    }
+
+    // Если это праздник, добавляем дополнительный класс holiday
+    if (isHoliday) {
+      classNames += ' holiday';
+    }
 
     // Добавляем класс vacation только если есть отпуска
     if (hasVacations) {

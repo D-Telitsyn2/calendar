@@ -6,6 +6,7 @@ import { getCurrentYear, generateUniqueColor, formatDate } from './utils/dateUti
 import { getUsers, addUser, deleteUser } from './services/userService'
 import { getVacations, addVacation, deleteUserVacations, deleteVacation } from './services/vacationService'
 import { resetDatabase } from './utils/resetDatabase'
+import { preloadHolidaysForYear } from './utils/holidayUtils'
 
 function App() {
   const [users, setUsers] = useState<User[]>([])
@@ -32,6 +33,9 @@ function App() {
         // Загружаем пользователей и отпуска из Firebase
         const loadedUsers = await getUsers()
         const loadedVacations = await getVacations()
+
+        // Предзагружаем данные о праздниках для текущего года
+        preloadHolidaysForYear(currentYear);
 
         // Устанавливаем загруженные данные в состояние
         setUsers(loadedUsers)
