@@ -33,9 +33,7 @@ export const deleteUser = async (id: string): Promise<void> => {
     }
     const userRef = doc(db, USERS_COLLECTION, id);
     await deleteDoc(userRef);
-    console.log(`Пользователь с ID ${id} успешно удален из базы данных`);
   } catch (error) {
-    console.error(`Ошибка при удалении пользователя с ID ${id}:`, error);
     throw error; // Прокидываем ошибку дальше для обработки
   }
 };

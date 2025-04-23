@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, KeyboardEvent } from 'react'
 import './App.css'
 import Calendar from './components/Calendar'
 import { User, VacationPeriod } from './types'
@@ -15,6 +15,10 @@ function App() {
   const [isAddingUser, setIsAddingUser] = useState<boolean>(false)
   const [newUserName, setNewUserName] = useState<string>('')
   const [isResetting, setIsResetting] = useState<boolean>(false);
+  // Добавляем состояния загрузки для всех асинхронных действий
+  const [isDeletingUser, setIsDeletingUser] = useState<string | null>(null); // ID удаляемого пользователя
+  const [isAddingUserLoading, setIsAddingUserLoading] = useState<boolean>(false);
+  const [isAddingVacation, setIsAddingVacation] = useState<boolean>(false);
   const currentYear = getCurrentYear()
 
   // Загрузка данных при первом рендере
@@ -44,6 +48,7 @@ function App() {
   const handleAddUser = async () => {
     if (newUserName.trim()) {
       try {
+        setIsAddingUserLoading(true);
         // Генерируем уникальный цвет для нового пользователя
         const existingColors = users.map(user => user.color);
         const newColor = generateUniqueColor(existingColors);
@@ -59,41 +64,20 @@ function App() {
         setIsAddingUser(false)
       } catch (error: unknown) {
         console.error('Ошибка при добавлении пользователя:', error instanceof Error ? error.message : error)
+      } finally {
+        setIsAddingUserLoading(false);
       }
     }
   }
 
   const handleUserDelete = async (userId: string) => {
     if (!userId) {
-      console.error('Ошибка: отсутствует ID пользователя для удаления');
       return;
     }
 
     try {
-      console.log(`Начинаем удаление пользователя с ID: ${userId}`);
-
-      // Сначала удаляем отпуска пользователя
-      try {
-        console.log(`Удаляем отпуска пользователя ${userId}`);
-        await deleteUserVacations(userId);
-        console.log(`Отпуска пользователя ${userId} успешно удалены`);
-      } catch (error: unknown) {
-        console.error(`Ошибка при удалении отпусков пользователя ${userId}:`, error);
-        throw new Error(`Не удалось удалить отпуска: ${error instanceof Error ? error.message : String(error)}`);
-      }
-
-      // Затем удаляем самого пользователя
-      try {
-        console.log(`Удаляем пользователя ${userId}`);
-        await deleteUser(userId);
-        console.log(`Пользователь ${userId} успешно удален`);
-      } catch (error: unknown) {
-        console.error(`Ошибка при удалении пользователя ${userId}:`, error);
-        throw new Error(`Не удалось удалить пользователя: ${error instanceof Error ? error.message : String(error)}`);
-      }
-
-      // Обновляем локальное состояние только после успешного завершения всех операций удаления
-      console.log('Обновляем состояние приложения после удаления');
+      setIsDeletingUser(userId);
+      // Обновляем UI сразу для более быстрого отклика
       setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
       setVacations(prevVacations => prevVacations.filter(vacation => vacation.userId !== userId));
 
@@ -102,10 +86,25 @@ function App() {
         setSelectionStart(null);
       }
 
-      console.log(`Пользователь ${userId} и все его отпуска полностью удалены`);
+      // Выполняем удаление в фоновом режиме
+      // Оба запроса выполняются параллельно для ускорения
+      await Promise.all([
+        deleteUserVacations(userId),
+        deleteUser(userId)
+      ]);
     } catch (error: unknown) {
-      console.error('Ошибка при удалении пользователя и его отпусков:', error);
-      alert('Ошибка при удалении пользователя. Подробности в консоли.');
+      // В случае ошибки перезагружаем данные, чтобы состояние было актуальным
+      try {
+        const loadedUsers = await getUsers();
+        const loadedVacations = await getVacations();
+        setUsers(loadedUsers);
+        setVacations(loadedVacations);
+      } catch {
+        // В случае ошибки при перезагрузке просто показываем сообщение
+      }
+      alert('Ошибка при удалении пользователя.');
+    } finally {
+      setIsDeletingUser(null);
     }
   }
 
@@ -118,6 +117,7 @@ function App() {
     }
 
     try {
+      setIsAddingVacation(true);
       // Нормализуем даты, устанавливая время на начало дня
       const normalizedSelectionStart = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate());
       const normalizedEndDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -137,6 +137,8 @@ function App() {
       setSelectionStart(null)
     } catch (error: unknown) {
       console.error('Ошибка при создании отпуска:', error instanceof Error ? error.message : error)
+    } finally {
+      setIsAddingVacation(false);
     }
   }
 
@@ -163,6 +165,12 @@ function App() {
       alert('Произошла ошибка при очистке базы данных. Подробности в консоли.');
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleAddUser();
     }
   };
 
@@ -194,11 +202,14 @@ function App() {
                 type="text"
                 value={newUserName}
                 onChange={(e) => setNewUserName(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Имя сотрудника"
                 autoFocus
               />
               <div className="user-form-actions">
-                <button onClick={handleAddUser}>Сохранить</button>
+                <button onClick={handleAddUser} disabled={isAddingUserLoading}>
+                  {isAddingUserLoading ? 'Сохранение...' : 'Сохранить'}
+                </button>
                 <button
                   className="cancel-button"
                   onClick={() => {
@@ -227,8 +238,8 @@ function App() {
               <button className="delete-button" onClick={(e) => {
                 e.stopPropagation();
                 handleUserDelete(user.id);
-              }}>
-                ✕
+              }} disabled={isDeletingUser === user.id}>
+                {isDeletingUser === user.id ? 'Удаление...' : '✕'}
               </button>
             </div>
           ))}

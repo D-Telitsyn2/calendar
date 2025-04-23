@@ -77,9 +77,7 @@ export const deleteVacation = async (id: string): Promise<void> => {
   try {
     const vacationRef = doc(db, VACATIONS_COLLECTION, id);
     await deleteDoc(vacationRef);
-    console.log(`Успешно удален отпуск с id: ${id}`);
   } catch (error) {
-    console.error(`Ошибка при удалении отпуска ${id}:`, error);
     throw error; // Прокидываем ошибку дальше для обработки
   }
 };
@@ -91,19 +89,13 @@ export const deleteUserVacations = async (userId: string): Promise<void> => {
     const q = query(vacationsCollection, where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
 
-    console.log(`Найдено ${querySnapshot.size} отпусков для удаления`);
-
     // Используем Promise.all для параллельного удаления
     await Promise.all(
-      querySnapshot.docs.map(document => {
-        console.log(`Удаляем отпуск с id: ${document.id}`);
-        return deleteDoc(doc(db, VACATIONS_COLLECTION, document.id));
-      })
+      querySnapshot.docs.map(document =>
+        deleteDoc(doc(db, VACATIONS_COLLECTION, document.id))
+      )
     );
-
-    console.log(`Все отпуски пользователя ${userId} удалены`);
   } catch (error) {
-    console.error(`Ошибка при удалении отпусков пользователя ${userId}:`, error);
     throw error;
   }
 };
