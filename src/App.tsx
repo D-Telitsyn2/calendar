@@ -18,7 +18,6 @@ function App() {
   // Добавляем состояния загрузки для всех асинхронных действий
   const [isDeletingUser, setIsDeletingUser] = useState<string | null>(null); // ID удаляемого пользователя
   const [isAddingUserLoading, setIsAddingUserLoading] = useState<boolean>(false);
-  const [isAddingVacation, setIsAddingVacation] = useState<boolean>(false);
   const currentYear = getCurrentYear()
 
   // Загрузка данных при первом рендере
@@ -117,7 +116,6 @@ function App() {
     }
 
     try {
-      setIsAddingVacation(true);
       // Нормализуем даты, устанавливая время на начало дня
       const normalizedSelectionStart = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate());
       const normalizedEndDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -138,7 +136,6 @@ function App() {
     } catch (error: unknown) {
       console.error('Ошибка при создании отпуска:', error instanceof Error ? error.message : error)
     } finally {
-      setIsAddingVacation(false);
     }
   }
 
