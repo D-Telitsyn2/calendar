@@ -159,16 +159,6 @@ const Calendar: React.FC<CalendarProps> = ({
     return startTimestamp === dateTimestamp;
   };
 
-  // Проверяет, входит ли дата в диапазон выбранного для удаления отпуска
-  const isInSelectedVacationRange = (): boolean => {
-    // Отключаем визуальное выделение всего диапазона
-    return false;
-
-    // Старый код:
-    // if (!selectedVacation) return false;
-    // return isDateInRange(date, selectedVacation.startDate, selectedVacation.endDate);
-  };
-
   const renderDayCell = (date: Date) => {
     const day = getDate(date);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -176,7 +166,6 @@ const Calendar: React.FC<CalendarProps> = ({
     const hasVacations = vacationsForDate.length > 0;
     const isPreviewRange = isInPreviewRange(date);
     const isStart = isStartDate(date);
-    const isInSelectedVacation = isInSelectedVacationRange(date);
 
     // Определяем стили для ячейки
     let classNames = `calendar-day ${isWeekend ? 'weekend' : ''}`;
@@ -193,11 +182,6 @@ const Calendar: React.FC<CalendarProps> = ({
 
       // Добавляем класс для изменения курсора, если выбран пользователь
       classNames += ' pointer-cursor';
-    }
-
-    // Добавляем класс для выделения всего диапазона выбранного отпуска
-    if (isInSelectedVacation && !selectedUserId) {
-      classNames += ' selected-vacation-range';
     }
 
     // Определяем стиль для ячейки с preview-range, используя цвет выбранного пользователя
