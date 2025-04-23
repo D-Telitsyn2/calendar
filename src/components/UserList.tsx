@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
+import { generateUniqueColor } from '../utils/dateUtils';
 
 interface UserListProps {
   users: User[];
@@ -17,42 +18,65 @@ const UserList: React.FC<UserListProps> = ({
   onUserDelete
 }) => {
   const [newUserName, setNewUserName] = useState('');
-  const [newUserColor, setNewUserColor] = useState('#3498db');
+  const [isAddingUser, setIsAddingUser] = useState(false);
 
   const handleAddUser = () => {
     if (newUserName.trim()) {
+      // Генерируем уникальный цвет для нового пользователя
+      const existingColors = users.map(user => user.color);
+      const newColor = generateUniqueColor(existingColors);
+
       const newUser: User = {
         id: `user-${Date.now()}`,
         name: newUserName.trim(),
-        color: newUserColor
+        color: newColor
       };
       onUserAdd(newUser);
       setNewUserName('');
+      setIsAddingUser(false);
     }
   };
 
   return (
     <div className="user-list">
-      <h2>Сотрудники</h2>
-      <div className="user-form">
-        <input
-          type="text"
-          value={newUserName}
-          onChange={(e) => setNewUserName(e.target.value)}
-          placeholder="Имя сотрудника"
-        />
-        <input
-          type="color"
-          value={newUserColor}
-          onChange={(e) => setNewUserColor(e.target.value)}
-        />
-        <button onClick={handleAddUser}>Добавить</button>
+      <div className="user-list-header">
+        <h3>Сотрудники</h3>
+        {!isAddingUser && (
+          <button className="add-user-button" onClick={() => setIsAddingUser(true)}>
+            + Добавить
+          </button>
+        )}
       </div>
-      <ul>
+
+      {isAddingUser && (
+        <div className="user-form">
+          <input
+            type="text"
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
+            placeholder="Имя сотрудника"
+            autoFocus
+          />
+          <div className="user-form-actions">
+            <button onClick={handleAddUser}>Сохранить</button>
+            <button
+              className="cancel-button"
+              onClick={() => {
+                setIsAddingUser(false);
+                setNewUserName('');
+              }}
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="users-container">
         {users.map((user) => (
-          <li
+          <div
             key={user.id}
-            className={selectedUserId === user.id ? 'selected' : ''}
+            className={`user-item ${selectedUserId === user.id ? 'selected' : ''}`}
             onClick={() => onUserSelect(user.id)}
           >
             <span className="user-color" style={{ backgroundColor: user.color }}></span>
@@ -63,9 +87,9 @@ const UserList: React.FC<UserListProps> = ({
             }}>
               ✕
             </button>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };
