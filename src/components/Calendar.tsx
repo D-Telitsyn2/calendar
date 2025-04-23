@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getDate } from 'date-fns';
 import { User, VacationPeriod } from '../types';
 import { generateCalendarForYear, getMonthName, isDateInRange } from '../utils/dateUtils';
@@ -9,6 +9,9 @@ interface CalendarProps {
   vacations: VacationPeriod[];
   selectedUserId: string | null;
   onDaySelect: (date: Date) => void;
+  externalSelectionStart: Date | null; // Новое свойство для синхронизации с родительским компонентом
+  onVacationSelect?: (vacation: VacationPeriod, user: User) => void; // Добавляем новый callback
+  selectedVacationForDelete: { vacation: VacationPeriod; user: User } | null; // Добавляем новый проп
 }
 
 const Calendar: React.FC<CalendarProps> = ({
@@ -16,24 +19,101 @@ const Calendar: React.FC<CalendarProps> = ({
   users,
   vacations,
   selectedUserId,
-  onDaySelect
+  onDaySelect,
+  externalSelectionStart, // Добавляем новый проп
+  onVacationSelect,
+  selectedVacationForDelete // Добавляем новый проп
 }) => {
   const calendar = generateCalendarForYear(year);
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
   const [selectionStart, setSelectionStart] = useState<Date | null>(null);
+  // Добавляем новое состояние для хранения выбранного отпуска
+  const [selectedVacation, setSelectedVacation] = useState<VacationPeriod | null>(null);
+
+  // Находим выбранного пользователя, чтобы использовать его цвет
+  const selectedUser = selectedUserId ? users.find(user => user.id === selectedUserId) : null;
+
+  // Синхронизируем внутреннее состояние с внешним
+  useEffect(() => {
+    setSelectionStart(externalSelectionStart);
+  }, [externalSelectionStart]);
+
+  // Синхронизируем состояние выбранного отпуска с родительским компонентом
+  useEffect(() => {
+    // Если в родительском компоненте есть выбранный отпуск, используем его
+    if (selectedVacationForDelete) {
+      setSelectedVacation(selectedVacationForDelete.vacation);
+    } else {
+      // Если в родительском компоненте нет выбранного отпуска, очищаем и наше состояние
+      setSelectedVacation(null);
+    }
+  }, [selectedVacationForDelete]);
+
+  // Очищаем hoverDate когда selectionStart === null
+  useEffect(() => {
+    if (!selectionStart) {
+      setHoverDate(null);
+    }
+  }, [selectionStart]);
+
+  // Сбрасываем выбранный отпуск при выборе пользователя (переключение в режим добавления)
+  useEffect(() => {
+    if (selectedUserId) {
+      setSelectedVacation(null);
+    }
+  }, [selectedUserId]);
 
   const handleDayClick = (date: Date) => {
-    // Save the selection start to track it in this component
-    if (!selectionStart) {
-      setSelectionStart(date);
-    } else {
-      setSelectionStart(null);
+    // Если выбран пользователь, значит мы в режиме добавления отпуска
+    if (selectedUserId) {
+      // Всегда разрешаем выбор даты для отпуска, даже если дата занята другим пользователем
+      if (!selectionStart) {
+        setSelectionStart(date);
+      } else {
+        setSelectionStart(null);
+      }
+      onDaySelect(date);
+      return;
     }
-    onDaySelect(date);
+
+    // Если мы здесь, значит не выбран активный пользователь (режим просмотра/удаления)
+    // Проверяем, была ли нажата ячейка с отпуском
+    const vacationsForDate = getVacationsForDate(date);
+    if (vacationsForDate.length === 0 && selectedVacation) {
+      // Клик по пустой ячейке - сбрасываем выделение
+      setSelectedVacation(null);
+      // Сообщаем родительскому компоненту о сбросе выбора
+      if (onVacationSelect) {
+        onVacationSelect(null as unknown as VacationPeriod, null as unknown as User);
+      }
+    }
+  };
+
+  const handleVacationSegmentClick = (vacation: VacationPeriod, user: User) => {
+    // Если выбран пользователь, мы в режиме добавления отпуска
+    if (selectedUserId) {
+      // В режиме добавления отпуска клик по сегменту должен работать как клик по ячейке
+      if (!selectionStart) {
+        setSelectionStart(vacation.startDate); // Используем начальную дату сегмента
+      } else {
+        setSelectionStart(null);
+      }
+      onDaySelect(vacation.startDate);
+      return;
+    }
+
+    // Выделяем отпуск и передаем его наверх для возможного удаления
+    setSelectedVacation(vacation);
+    if (onVacationSelect) {
+      onVacationSelect(vacation, user);
+    }
   };
 
   const handleMouseEnter = (date: Date) => {
-    setHoverDate(date);
+    // Активируем hover только если есть начало выбора
+    if (selectionStart) {
+      setHoverDate(date);
+    }
   };
 
   const handleMouseLeave = () => {
@@ -79,6 +159,16 @@ const Calendar: React.FC<CalendarProps> = ({
     return startTimestamp === dateTimestamp;
   };
 
+  // Проверяет, входит ли дата в диапазон выбранного для удаления отпуска
+  const isInSelectedVacationRange = (): boolean => {
+    // Отключаем визуальное выделение всего диапазона
+    return false;
+
+    // Старый код:
+    // if (!selectedVacation) return false;
+    // return isDateInRange(date, selectedVacation.startDate, selectedVacation.endDate);
+  };
+
   const renderDayCell = (date: Date) => {
     const day = getDate(date);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -86,15 +176,47 @@ const Calendar: React.FC<CalendarProps> = ({
     const hasVacations = vacationsForDate.length > 0;
     const isPreviewRange = isInPreviewRange(date);
     const isStart = isStartDate(date);
+    const isInSelectedVacation = isInSelectedVacationRange(date);
 
-    let classNames = `calendar-day ${hasVacations ? 'vacation' : ''} ${isWeekend ? 'weekend' : ''}`;
-    if (isStart) classNames += ' start-date';
-    else if (isPreviewRange) classNames += ' preview-range';
+    // Определяем стили для ячейки
+    let classNames = `calendar-day ${isWeekend ? 'weekend' : ''}`;
+
+    // Добавляем класс vacation только если есть отпуска
+    if (hasVacations) {
+      classNames += ' vacation';
+    }
+
+    // Добавляем классы для режима выбора дат (только если выбран пользователь)
+    if (selectedUserId) {
+      if (isStart) classNames += ' start-date';
+      else if (isPreviewRange) classNames += ' preview-range';
+
+      // Добавляем класс для изменения курсора, если выбран пользователь
+      classNames += ' pointer-cursor';
+    }
+
+    // Добавляем класс для выделения всего диапазона выбранного отпуска
+    if (isInSelectedVacation && !selectedUserId) {
+      classNames += ' selected-vacation-range';
+    }
+
+    // Определяем стиль для ячейки с preview-range, используя цвет выбранного пользователя
+    const cellStyle: React.CSSProperties = {};
+    if (selectedUser && isPreviewRange) {
+      // Используем цвет выбранного пользователя с прозрачностью для preview-range
+      cellStyle.backgroundColor = `${selectedUser.color}80`; // 80 - это 50% прозрачность в hex
+    }
+
+    if (selectedUser && isStart) {
+      // Для start-date используем более насыщенный цвет (меньшая прозрачность)
+      cellStyle.backgroundColor = `${selectedUser.color}B3`; // B3 - это 70% прозрачность в hex
+    }
 
     return (
       <td
         key={date.toISOString()}
         className={classNames}
+        style={cellStyle}
         onClick={() => handleDayClick(date)}
         onMouseEnter={() => handleMouseEnter(date)}
         onMouseLeave={handleMouseLeave}
@@ -110,19 +232,28 @@ const Calendar: React.FC<CalendarProps> = ({
 
                 const segmentWidth = 100 / vacationsForDate.length;
                 const leftPosition = segmentWidth * index;
+                const isThisVacationSelected = selectedVacation && selectedVacation.id === vacation.id;
+
+                // Добавляем класс для выделения выбранного отпуска
+                let segmentClass = "vacation-segment";
+                if (isThisVacationSelected) {
+                  segmentClass += " selected-vacation-segment";
+                }
 
                 return (
                   <div
                     key={vacation.id}
-                    className="vacation-segment"
+                    className={segmentClass}
                     style={{
                       left: `${leftPosition}%`,
                       width: `${segmentWidth}%`,
                       backgroundColor: user.color
                     }}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Останавливаем всплытие, чтобы не срабатывал handleDayClick
+                      handleVacationSegmentClick(vacation, user);
+                    }}
                   >
-                    {/* Удалена кнопка удаления отпуска */}
                   </div>
                 );
               })}

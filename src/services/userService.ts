@@ -27,13 +27,9 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
 
 // Удаление пользователя
 export const deleteUser = async (id: string): Promise<void> => {
-  try {
-    if (!id) {
-      throw new Error('ID пользователя не указан');
-    }
-    const userRef = doc(db, USERS_COLLECTION, id);
-    await deleteDoc(userRef);
-  } catch (error) {
-    throw error; // Прокидываем ошибку дальше для обработки
+  if (!id) {
+    throw new Error('ID пользователя не указан');
   }
+  const userRef = doc(db, USERS_COLLECTION, id);
+  await deleteDoc(userRef);
 };

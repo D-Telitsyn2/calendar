@@ -23,7 +23,7 @@ h1 {
   font-size: 20px;
 }
 
-/* Новый стиль заголовка */
+/* Стили заголовка */
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -36,7 +36,7 @@ h1 {
   align-items: center;
 }
 
-/* Стиль для формы добавления пользователя в заголовке */
+/* Стили для формы добавления пользователя в заголовке */
 .user-form-inline {
   display: flex;
   align-items: center;
@@ -78,6 +78,7 @@ h1 {
   background-color: #95a5a6;
 }
 
+/* Стили для кнопок действий */
 .add-user-button {
   padding: 8px 16px;
   background-color: #3498db;
@@ -93,6 +94,59 @@ h1 {
   background-color: #2980b9;
 }
 
+.cancel-selection-button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin-left: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancel-selection-button:hover {
+  background-color: #c0392b;
+}
+
+.reset-database-button {
+  padding: 8px 16px;
+  margin-left: 10px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.reset-database-button:hover {
+  background-color: #c0392b;
+}
+
+.reset-database-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.delete-vacation-button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin-left: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.delete-vacation-button:hover {
+  background-color: #c0392b;
+}
+
 /* Стиль для контейнера приложения */
 .app-container {
   display: flex;
@@ -100,12 +154,13 @@ h1 {
   gap: 20px;
 }
 
-/* Стиль для чипсов пользователей */
+/* Стили для чипсов пользователей */
 .users-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 15px;
+  width: fit-content;
 }
 
 .user-chip {
@@ -118,6 +173,7 @@ h1 {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: background-color 0.2s, transform 0.2s;
+  border: 2px solid transparent;
 }
 
 .user-chip:hover {
@@ -170,6 +226,7 @@ h1 {
   border-radius: 4px;
   margin-bottom: 15px;
   font-size: 14px;
+  position: relative;
 }
 
 .selection-info p {
@@ -187,6 +244,14 @@ h1 {
 /* Стили календаря */
 .calendar {
   width: 100%;
+  user-select: none; /* Запрещаем выделение в календаре */
+}
+
+.calendar h2 {
+  margin-bottom: 15px;
+  font-size: 1.4rem;
+  color: #2c3e50;
+  text-align: center;
 }
 
 .calendar-grid {
@@ -224,32 +289,25 @@ h1 {
 }
 
 .calendar-month td {
-  padding: 0; /* Remove padding */
+  padding: 0;
   text-align: center;
   border: 1px solid #ddd;
   height: 36px;
   position: relative;
-  cursor: pointer;
+  cursor: default; /* По умолчанию cursor: default */
   transition: background-color 0.2s;
   font-size: 16px;
 }
 
-.calendar-month td.empty-day {
-  background-color: #f8f9fa;
-  cursor: default;
-}
-
-/* Изменяем, чтобы hover не перекрывал подсветку диапазона */
-.calendar-day.preview-range:hover,
-.calendar-day.start-date:hover {
-  background-color: rgba(52, 152, 219, 0.6); /* Делаем более приоритетным */
+/* Добавляем pointer для ячеек, когда выбран пользователь (режим добавления отпуска) */
+.calendar-month td.pointer-cursor {
+  cursor: pointer;
 }
 
 .calendar-day {
   position: relative;
 }
 
-/* Удаляем белый цвет текста и тень */
 .calendar-day.vacation {
   /* Удаляем color: white и text-shadow */
 }
@@ -257,6 +315,13 @@ h1 {
 .calendar-day.weekend {
   background-color: #f8f8f8;
   color: #e74c3c;
+}
+
+/* Стили для выделения и hover-эффектов */
+.calendar-day.preview-range:hover,
+.calendar-day.start-date:hover {
+  background-color: rgba(52, 152, 219, 0.6);
+  filter: brightness(90%);
 }
 
 /* Стили для ячеек с пересекающимися отпусками */
@@ -267,9 +332,9 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 6px; /* Move padding here from the td */
-  z-index: 2; /* Ensure content stays above vacation segments */
-  font-weight: 500; /* Делаем шрифт полужирным для лучшей видимости */
+  padding: 6px;
+  z-index: 2;
+  font-weight: 500;
 }
 
 .vacation-segment {
@@ -277,7 +342,15 @@ h1 {
   top: 0;
   height: 100%;
   z-index: 1;
-  opacity: 0.7; /* Увеличиваем прозрачность для лучшей видимости чисел */
+  opacity: 0.7;
+  cursor: pointer; /* Всегда pointer для сегментов отпуска */
+}
+
+/* Стиль для выделения сегмента отпуска */
+.vacation-segment.selected-vacation-segment {
+  opacity: 0.9;
+  z-index: 2;
+  box-shadow: inset 0 0 0 2px rgba(52, 152, 219, 0.8);
 }
 
 /* Стили для тултипов */
@@ -346,74 +419,66 @@ h1 {
   background-color: #c0392b;
 }
 
-/* Стиль для загрузчика */
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  font-size: 18px;
-  color: #3498db;
+/* Добавляем стили для более четкого отображения занятых дней, которые выбраны */
+.calendar-day.vacation.start-date,
+.calendar-day.vacation.preview-range {
   position: relative;
 }
 
-.loading:after {
+.calendar-day.vacation.start-date::after,
+.calendar-day.vacation.preview-range::after {
   content: '';
-  width: 24px;
-  height: 24px;
-  border: 4px solid #f3f3f3;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid #3498db;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.calendar-day.vacation.start-date::after {
+  border-color: #2980b9;
+  border-width: 3px;
+}
+
+/* Легенда календаря */
+.calendar-legend {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.calendar-legend h3 {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  color: #2c3e50;
+}
+
+.legend-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  border-top: 4px solid #3498db;
-  margin-left: 10px;
-  animation: spin 1s linear infinite;
+  flex-shrink: 0;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-#root {
-  width: 100%;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+.legend-name {
+  font-size: 0.9rem;
 }
 
 /* User List Styles */
@@ -428,21 +493,6 @@ h1 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-}
-
-.add-user-button {
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.add-user-button:hover {
-  background-color: #2980b9;
 }
 
 .user-form {
@@ -531,21 +581,6 @@ h1 {
   border-left: 3px solid #3498db;
 }
 
-.user-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.user-name {
-  flex-grow: 1;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .delete-button {
   background: none;
   border: none;
@@ -566,147 +601,84 @@ h1 {
   color: #c0392b;
 }
 
-.selection-info {
-  padding: 10px 15px;
-  background-color: #e8f4fc;
-  border-left: 3px solid #3498db;
-  border-radius: 4px;
-  margin-bottom: 15px;
-  font-size: 14px;
+.delete-button:disabled,
+.add-user-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
-.selection-info p {
-  margin: 4px 0;
+/* Стили для индикаторов загрузки */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 18px;
+  color: #3498db;
+  position: relative;
 }
 
-/* Calendar Styles */
-.calendar h2 {
-  margin-bottom: 15px;
-  font-size: 1.4rem;
-  color: #2c3e50;
-  text-align: center;
+.loading:after {
+  content: '';
+  width: 24px;
+  height: 24px;
+  border: 4px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 4px solid #3498db;
+  margin-left: 10px;
+  animation: spin 1s linear infinite;
 }
 
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.calendar-month {
-  margin-bottom: 5px;
-}
-
-.calendar-month h3 {
-  margin-bottom: 8px;
-  text-align: center;
-  font-size: 20px;
-  color: #2c3e50;
-  text-transform: capitalize;
-}
-
-.calendar-month table {
+.vacation-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.calendar-month th {
-  padding: 6px;
-  text-align: center;
-  background-color: #f8f9fa;
-  border: 1px solid #ddd;
-  font-weight: 500;
-  font-size: 16px;
-}
-
-.calendar-month td {
-  padding: 0; /* Remove padding */
-  text-align: center;
-  border: 1px solid #ddd;
-  height: 36px;
-  position: relative;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-size: 16px;
-}
-
-.calendar-month td.empty-day {
-  background-color: #f8f9fa;
-  cursor: default;
-}
-
-/* Изменяем, чтобы hover не перекрывал подсветку диапазона */
-.calendar-day.preview-range:hover,
-.calendar-day.start-date:hover {
-  background-color: rgba(52, 152, 219, 0.6); /* Делаем более приоритетным */
-}
-
-.calendar-day {
-  position: relative;
-}
-
-/* Удаляем белый цвет текста и тень */
-.calendar-day.vacation {
-  /* Удаляем color: white и text-shadow */
-}
-
-.calendar-day.weekend {
-  background-color: #f8f8f8;
-  color: #e74c3c;
-}
-
-/* Style for vacation preview */
-.calendar-day.preview-range {
-  background-color: rgba(52, 152, 219, 0.3);
-}
-
-.calendar-day.start-date {
-  background-color: rgba(52, 152, 219, 0.5);
-}
-
-.calendar-day.preview-range:hover,
-.calendar-day.start-date:hover {
-  background-color: rgba(52, 152, 219, 0.6);
-}
-
-/* Легенда календаря */
-.calendar-legend {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
   border-radius: 8px;
 }
 
-.calendar-legend h3 {
-  margin-bottom: 10px;
-  font-size: 1rem;
-  color: #2c3e50;
+.vacation-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 5px solid #3498db;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
 }
 
-.legend-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
+/* Стиль для кнопки, когда она в состоянии загрузки */
+.button-loading {
+  position: relative;
+  color: transparent !important;
 }
 
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-}
-
-.legend-color {
+.button-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 16px;
   height: 16px;
+  margin-top: -8px;
+  margin-left: -8px;
+  border: 2px solid #fff;
   border-radius: 50%;
-  flex-shrink: 0;
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
 }
 
-.legend-name {
-  font-size: 0.9rem;
+/* Анимация вращения для лоадера */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Responsive styles */
@@ -758,82 +730,46 @@ h1 {
   }
 }
 
-.reset-database-button {
-  padding: 8px 16px;
-  margin-left: 10px;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.reset-database-button:hover {
-  background-color: #c0392b;
-}
-
-.reset-database-button:disabled {
-  background-color: #95a5a6;
-  cursor: not-allowed;
-}
-
-/* Стили для индикаторов загрузки */
-.vacation-loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
+/* Стили от Vite по умолчанию - можно удалить, если не используются */
+#root {
   width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.8);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-  border-radius: 8px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-.vacation-loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 5px solid #f3f3f3;
-  border-radius: 50%;
-  border-top: 5px solid #3498db;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-.delete-button:disabled,
-.add-user-button:disabled {
-  cursor: wait;
-  opacity: 0.7;
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Стиль для кнопки, когда она в состоянии загрузки */
-.button-loading {
-  position: relative;
-  color: transparent !important;
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
 }
 
-.button-loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 16px;
-  height: 16px;
-  margin-top: -8px;
-  margin-left: -8px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  border-top-color: transparent;
-  animation: spin 0.8s linear infinite;
+.card {
+  padding: 2em;
 }
 
-/* Анимация вращения для лоадера */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.read-the-docs {
+  color: #888;
 }

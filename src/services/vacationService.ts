@@ -74,28 +74,20 @@ export const updateVacation = async (id: string, vacationData: Partial<Omit<Vaca
 
 // Удаление отпуска
 export const deleteVacation = async (id: string): Promise<void> => {
-  try {
-    const vacationRef = doc(db, VACATIONS_COLLECTION, id);
-    await deleteDoc(vacationRef);
-  } catch (error) {
-    throw error; // Прокидываем ошибку дальше для обработки
-  }
+  const vacationRef = doc(db, VACATIONS_COLLECTION, id);
+  await deleteDoc(vacationRef);
 };
 
 // Удаление всех отпусков пользователя
 export const deleteUserVacations = async (userId: string): Promise<void> => {
-  try {
-    const vacationsCollection = collection(db, VACATIONS_COLLECTION);
-    const q = query(vacationsCollection, where("userId", "==", userId));
-    const querySnapshot = await getDocs(q);
+  const vacationsCollection = collection(db, VACATIONS_COLLECTION);
+  const q = query(vacationsCollection, where("userId", "==", userId));
+  const querySnapshot = await getDocs(q);
 
-    // Используем Promise.all для параллельного удаления
-    await Promise.all(
-      querySnapshot.docs.map(document =>
-        deleteDoc(doc(db, VACATIONS_COLLECTION, document.id))
-      )
-    );
-  } catch (error) {
-    throw error;
-  }
+  // Используем Promise.all для параллельного удаления
+  await Promise.all(
+    querySnapshot.docs.map(document =>
+      deleteDoc(doc(db, VACATIONS_COLLECTION, document.id))
+    )
+  );
 };
