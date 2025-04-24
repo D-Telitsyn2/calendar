@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getDate } from 'date-fns';
 import { User, VacationPeriod } from '../types';
 import { generateCalendarForYear, getMonthName, isDateInRange } from '../utils/dateUtils';
-import { isRussianHoliday } from '../utils/holidayUtils';
+import { isRussianHolidaySync, isShortWorkDaySync } from '../utils/holidayUtils';
 
 interface CalendarProps {
   year: number;
@@ -163,7 +163,8 @@ const Calendar: React.FC<CalendarProps> = ({
   const renderDayCell = (date: Date) => {
     const day = getDate(date);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-    const isHoliday = isRussianHoliday(date);
+    const isHoliday = isRussianHolidaySync(date);
+    const isShortDay = isShortWorkDaySync(date);
     const vacationsForDate = getVacationsForDate(date);
     const hasVacations = vacationsForDate.length > 0;
     const isPreviewRange = isInPreviewRange(date);
@@ -172,7 +173,7 @@ const Calendar: React.FC<CalendarProps> = ({
     // Определяем стили для ячейки
     let classNames = `calendar-day`;
 
-    // Добавляем класс weekend для выходных или праздничных дней
+    // Добавляем класс weekend для выходных дней
     if (isWeekend) {
       classNames += ' weekend';
     }
@@ -180,6 +181,11 @@ const Calendar: React.FC<CalendarProps> = ({
     // Если это праздник, добавляем дополнительный класс holiday
     if (isHoliday) {
       classNames += ' holiday';
+    }
+
+    // Если это сокращенный рабочий день, добавляем соответствующий класс
+    if (isShortDay) {
+      classNames += ' short-day';
     }
 
     // Добавляем класс vacation только если есть отпуска
@@ -219,6 +225,8 @@ const Calendar: React.FC<CalendarProps> = ({
       >
         <div className="calendar-day-content">
           {day}
+          {/* Маркер для сокращенного дня */}
+          {isShortDay && <div className="short-day-marker" title="Сокращенный рабочий день"></div>}
 
           {/* Рендерим сегменты для отпусков */}
           {hasVacations && (

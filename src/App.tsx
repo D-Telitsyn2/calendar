@@ -35,7 +35,7 @@ function App() {
         const loadedVacations = await getVacations()
 
         // Предзагружаем данные о праздниках для текущего года
-        preloadHolidaysForYear(currentYear);
+        await preloadHolidaysForYear(currentYear);
 
         // Устанавливаем загруженные данные в состояние
         setUsers(loadedUsers)

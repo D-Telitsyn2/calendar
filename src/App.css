@@ -335,13 +335,45 @@ h1 {
 
 .calendar-day.weekend {
   background-color: #f8f8f8;
-  color: #e74c3c;
+  color: #f20000;
 }
 
 /* Обновляем стиль для праздничных дней - без подчеркивания */
 .calendar-day.holiday {
-  color: #e74c3c; /* Красный цвет текста для праздничных дней - такой же как для выходных */
+  color: #f20000; /* Красный цвет текста для праздничных дней - такой же как для выходных */
   font-weight: 600; /* Оставляем полужирным для лучшего выделения */
+}
+
+/* Стили для сокращенных рабочих дней */
+.calendar-day.short-day {
+  position: relative;
+}
+
+.short-day-marker {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 0px solid transparent;
+  border-top: 6px solid #ffcc00;
+  z-index: 2;
+}
+
+.calendar-day.short-day:hover::after {
+  content: 'Сокращенный рабочий день';
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 100;
 }
 
 /* Стили для выделения и hover-эффектов */
@@ -369,7 +401,7 @@ h1 {
   top: 0;
   height: 100%;
   z-index: 1;
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: pointer; /* Всегда pointer для сегментов отпуска */
 }
 
