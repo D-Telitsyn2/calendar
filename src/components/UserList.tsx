@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { User } from '../types';
+import { Employee } from '../types';
 import { generateUniqueColor } from '../utils/dateUtils';
 
 interface UserListProps {
-  users: User[];
+  users: Employee[];
   selectedUserId: string | null;
   onUserSelect: (userId: string) => void;
-  onUserAdd: (user: User) => void;
+  onUserAdd: (user: Employee) => void;
   onUserDelete: (userId: string) => void;
 }
 
@@ -25,10 +25,11 @@ const UserList: React.FC<UserListProps> = ({
       const existingColors = users.map(user => user.color);
       const newColor = generateUniqueColor(existingColors);
 
-      const newUser: User = {
+      const newUser: Employee = {
         id: `user-${Date.now()}`,
         name: newUserName.trim(),
-        color: newColor
+        color: newColor,
+        accountId: '', // Adding required accountId field
       };
       onUserAdd(newUser);
       setNewUserName('');

@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Правила для работы с сотрудниками
+    match /employees/{employeeId} {
+      allow read: if request.auth != null && resource.data.accountId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.accountId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.accountId == request.auth.uid;
+    }
+
+    // Правила для работы с отпусками
+    match /vacations/{vacationId} {
+      allow read: if request.auth != null && resource.data.accountId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.accountId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.accountId == request.auth.uid;
+    }
+  }
+}
