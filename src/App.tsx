@@ -7,6 +7,27 @@ import { useCalendarStore } from './utils/store'
 import { getCurrentYear, formatDate } from './utils/dateUtils'
 import { onUserChanged, logout } from './services/authService';
 import type { User as FirebaseUser } from 'firebase/auth';
+// Импорт компонентов Material UI
+import {
+  Typography,
+  Button,
+  TextField,
+  AppBar,
+  Toolbar,
+  Box,
+  Chip,
+  Avatar,
+  Stack,
+  Paper,
+  Container
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Close as CloseIcon,
+  Cancel as CancelIcon,
+  DeleteForever as DeleteForeverIcon,
+  Logout as LogoutIcon
+} from '@mui/icons-material';
 
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -19,7 +40,6 @@ function App() {
     selectionStart,
     isAddingEmployee,
     newEmployeeName,
-    isResetting,
     isDeletingEmployee,
     isAddingEmployeeLoading,
     selectedVacationForDelete,
@@ -34,8 +54,7 @@ function App() {
     cancelSelection,
     selectVacation,
     deleteVacation,
-    deleteAllEmployeeVacations,
-    resetDatabaseData
+    deleteAllEmployeeVacations
   } = useCalendarStore();
 
   const currentYear = getCurrentYear();
@@ -63,20 +82,25 @@ function App() {
   // Обработчик клика вне области выбора
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
-      if (calendarRef.current && employeeChipsRef.current) {
-        const isClickInsideCalendar = calendarRef.current.contains(event.target as Node);
-        const isClickInsideEmployeeChips = employeeChipsRef.current.contains(event.target as Node);
-        const buttonsContainerRef = document.querySelector('.header-actions');
-        const isClickInsideButtons = buttonsContainerRef && buttonsContainerRef.contains(event.target as Node);
+      // Проверяем, был ли клик на ячейке календаря с датой
+      const clickedElement = event.target as HTMLElement;
+      const calendarDayCell = clickedElement.closest('.calendar-day');
+      const isClickInsideCalendarDay = calendarDayCell !== null;
 
-        if (!isClickInsideCalendar && !isClickInsideEmployeeChips && !isClickInsideButtons) {
-          if (selectedEmployeeId) {
-            useCalendarStore.setState({ selectedEmployeeId: null, selectionStart: null });
-          }
+      // Проверяем клик в области кнопок действий (должен сохранить выбор)
+      const isClickInsideActionButtons = headerRef.current && headerRef.current.contains(event.target as Node);
 
-          if (selectedVacationForDelete) {
-            useCalendarStore.setState({ selectedVacationForDelete: null });
-          }
+      // Проверяем клик в списке сотрудников (чипсы) - тоже сохраняет выбор
+      const isClickInsideEmployeeChips = employeeChipsRef.current && employeeChipsRef.current.contains(event.target as Node);
+
+      // Если клик был не на ячейке с датой, не в кнопках и не в списке сотрудников - снимаем выбор
+      if (!isClickInsideCalendarDay && !isClickInsideActionButtons && !isClickInsideEmployeeChips) {
+        if (selectedEmployeeId) {
+          useCalendarStore.setState({ selectedEmployeeId: null, selectionStart: null });
+        }
+
+        if (selectedVacationForDelete) {
+          useCalendarStore.setState({ selectedVacationForDelete: null });
         }
       }
     }
@@ -108,119 +132,149 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header" ref={headerRef}>
-        <div className="header-container">
-          <h1>Календарь отпусков {currentYear}</h1>
-        </div>
+    <Box className="app">
+      <AppBar position='static' elevation={0} color="transparent" ref={headerRef}>
+        <Toolbar>
+          <Box>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
+              Календарь отпусков {currentYear}
+            </Typography>
+          </Box>
 
-        <div className="app-header-actions">
-          <div className="user-info">
-              <span className="user-email">{user.email}</span>
-              <button onClick={logout} className="logout-button">Выйти</button>
-            </div>
-          <div className="header-actions">
-            {!isAddingEmployee ? (
-              <>
-                <button
-                  className="add-user-button"
-                  onClick={startAddingEmployee}
-                >
-                  + Добавить сотрудника
-                </button>
-
-                {selectionStart && selectedEmployeeId && (
-                  <button
-                    className="cancel-selection-button"
-                    onClick={cancelSelection}
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ justifyContent: "flex-end", flexGrow: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              {!isAddingEmployee ? (
+                <>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<AddIcon />}
+                    onClick={startAddingEmployee}
+                    size="small"
                   >
-                    Отменить выбор даты ({formatDate(selectionStart)})
-                  </button>
-                )}
+                    Добавить
+                  </Button>
 
-                {selectedEmployeeId && !selectionStart && (
-                  <button
-                    className="delete-all-vacations-button"
-                    onClick={deleteAllEmployeeVacations}
+                  {selectionStart && selectedEmployeeId && (
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      startIcon={<CancelIcon />}
+                      onClick={cancelSelection}
+                      size="small"
+                    >
+                      Отмена ({formatDate(selectionStart)})
+                    </Button>
+                  )}
+
+                  {selectedEmployeeId && !selectionStart && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteForeverIcon />}
+                      onClick={deleteAllEmployeeVacations}
+                      size="small"
+                    >
+                      Удалить отпуска
+                    </Button>
+                  )}
+
+                  {selectedVacationForDelete && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteForeverIcon />}
+                      onClick={deleteVacation}
+                      size="small"
+                    >
+                      Удалить
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Paper sx={{ p: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TextField
+                    size="small"
+                    value={newEmployeeName}
+                    onChange={(e) => setNewEmployeeName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Имя сотрудника"
+                    autoFocus
+                    variant="outlined"
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={addNewEmployee}
+                    disabled={isAddingEmployeeLoading}
+                    size="small"
                   >
-                    Удалить все отпуска {employees.find(e => e.id === selectedEmployeeId)?.name}
-                  </button>
-                )}
-
-                {selectedVacationForDelete && (
-                  <button
-                    className="delete-vacation-button"
-                    onClick={deleteVacation}
-                  >
-                    Удалить отпуск для {selectedVacationForDelete.employee.name}
-                  </button>
-                )}
-
-                <button
-                  className="reset-database-button"
-                  onClick={resetDatabaseData}
-                  disabled={isResetting}
-                >
-                  {isResetting ? <span className="button-spinner"></span> : 'Очистить базу данных'}
-                </button>
-              </>
-            ) : (
-              <div className="user-form-inline">
-                <input
-                  type="text"
-                  value={newEmployeeName}
-                  onChange={(e) => setNewEmployeeName(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Имя сотрудника"
-                  autoFocus
-                />
-                <div className="user-form-actions">
-                  <button onClick={addNewEmployee} disabled={isAddingEmployeeLoading}>
-                    {isAddingEmployeeLoading ? <span className="button-spinner"></span> : 'Сохранить'}
-                  </button>
-                  <button
-                    className="cancel-button"
+                    {isAddingEmployeeLoading ? "..." : "Сохранить"}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="inherit"
                     onClick={cancelAddingEmployee}
+                    size="small"
                   >
                     Отмена
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+                  </Button>
+                </Paper>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2">{user.email}</Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                color="inherit"
+                startIcon={<LogoutIcon />}
+                onClick={logout}
+              >
+                Выйти
+              </Button>
+            </Box>
+          </Stack>
+        </Toolbar>
+      </AppBar>
 
-      <div className="app-container">
-        <div className="users-chips" ref={employeeChipsRef}>
+      <Container maxWidth={false} sx={{ my: 'auto'}}>
+        <Box ref={employeeChipsRef} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
           {employees.map((employee) => (
-            <div
+            <Chip
               key={employee.id}
-              className={`user-chip ${selectedEmployeeId === employee.id ? 'selected' : ''}`}
+              label={employee.name}
               onClick={() => selectEmployee(employee.id)}
-            >
-              <span className="user-color" style={{ backgroundColor: employee.color }}></span>
-              <span className="user-name">{employee.name}</span>
-              <button className="delete-button" onClick={(e) => {
+              onDelete={(e) => {
                 e.stopPropagation();
                 deleteEmployeeById(employee.id);
-              }} disabled={isDeletingEmployee === employee.id}>
-                {isDeletingEmployee === employee.id ? (
-                  <span className="mini-spinner"></span>
-                ) : '✕'}
-              </button>
-            </div>
+              }}
+              deleteIcon={
+                isDeletingEmployee === employee.id ?
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24 }}>
+                  <Box sx={{ width: 16, height: 16 }} className="mini-spinner" />
+                </Box> :
+                <CloseIcon />
+              }
+              avatar={<Avatar sx={{ bgcolor: employee.color }}></Avatar>}
+              variant="outlined"
+              color={selectedEmployeeId === employee.id ? "primary" : "default"}
+              sx={{
+                fontWeight: selectedEmployeeId === employee.id ? 'bold' : 'normal',
+                borderWidth: selectedEmployeeId === employee.id ? 2 : 1,
+              }}
+            />
           ))}
-        </div>
+        </Box>
 
-        <main className="main-content" ref={calendarRef}>
+        <Box className="main-content" ref={calendarRef} sx={{ mt: 2, mb: 3 }}>
           <Calendar
             year={currentYear}
             onVacationSelect={selectVacation}
           />
-        </main>
-      </div>
-    </div>
+        </Box>
+      </Container>
+    </Box>
   )
 }
 

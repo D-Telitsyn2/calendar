@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDate } from 'date-fns';
+import { getDate, isSameDay } from 'date-fns';
 import { Employee, VacationPeriod } from '../types';
 import { generateCalendarForYear, getMonthName, isDateInRange } from '../utils/dateUtils';
 import { isRussianHolidaySync, isShortWorkDaySync } from '../utils/holidayUtils';
@@ -147,6 +147,12 @@ const Calendar: React.FC<CalendarProps> = ({
     return startTimestamp === dateTimestamp;
   };
 
+  // Function to check if a date is today
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return isSameDay(today, date);
+  };
+
   const renderDayCell = (date: Date) => {
     const day = getDate(date);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -156,6 +162,7 @@ const Calendar: React.FC<CalendarProps> = ({
     const hasVacations = vacationsForDate.length > 0;
     const isPreviewRange = isInPreviewRange(date);
     const isStart = isStartDate(date);
+    const isTodayDate = isToday(date);
 
     let classNames = `calendar-day`;
 
@@ -173,6 +180,10 @@ const Calendar: React.FC<CalendarProps> = ({
 
     if (hasVacations) {
       classNames += ' vacation';
+    }
+
+    if (isTodayDate) {
+      classNames += ' today';
     }
 
     if (selectedEmployeeId) {

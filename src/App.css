@@ -14,6 +14,9 @@ body {
 .app {
   width: calc(100% - 120px);
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 
   @media (max-width: 1000px) {
     width: 100%;
@@ -286,7 +289,7 @@ h1 {
   background-color: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
 
   @media (max-width: 1000px) {
     padding: 16px;
@@ -364,7 +367,6 @@ h1 {
   }
 }
 
-/* Добавляем pointer для ячеек, когда выбран пользователь (режим добавления отпуска) */
 .calendar-month td.pointer-cursor {
   cursor: pointer;
 }
@@ -373,21 +375,15 @@ h1 {
   position: relative;
 }
 
-.calendar-day.vacation {
-  /* Удаляем color: white и text-shadow */
-}
-
 .calendar-day.weekend {
   background-color: #f8f8f8;
 }
 
-/* Обновляем стиль для праздничных дней - без подчеркивания */
 .calendar-day.holiday .calendar-day-content {
   color: #e60000;
   font-weight: 600;
 }
 
-/* Стили для сокращенных рабочих дней */
 .calendar-day.short-day {
   position: relative;
 }
@@ -515,6 +511,20 @@ h1 {
   padding: 0;
   line-height: 1;
 }
+
+.calendar-day.today {
+  &::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border: 2px solid #3498db60;
+    pointer-events: none;
+    z-index: 3;
+  }
+}
+
 
 .calendar-day:hover .remove-vacation-button {
   opacity: 1;
@@ -932,8 +942,6 @@ h1 {
 #root {
   width: 100%;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
 
   @media (max-width: 1000px) {
     padding: 16px;

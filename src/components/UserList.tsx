@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import { Employee } from '../types';
 import { generateUniqueColor } from '../utils/dateUtils';
+// Импорт компонентов Material UI
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  List,
+  ListItem,
+  IconButton,
+  Divider,
+  Paper,
+  Stack
+} from '@mui/material';
+import { Add, Close } from '@mui/icons-material';
 
 interface UserListProps {
   users: Employee[];
@@ -38,59 +52,92 @@ const UserList: React.FC<UserListProps> = ({
   };
 
   return (
-    <div className="user-list">
-      <div className="user-list-header">
-        <h3>Сотрудники</h3>
+    <Paper elevation={2} sx={{ padding: 2, borderRadius: 2 }}>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6">Сотрудники</Typography>
         {!isAddingUser && (
-          <button className="add-user-button" onClick={() => setIsAddingUser(true)}>
-            + Добавить
-          </button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Add />}
+            onClick={() => setIsAddingUser(true)}
+          >
+            Добавить
+          </Button>
         )}
-      </div>
+      </Box>
 
       {isAddingUser && (
-        <div className="user-form">
-          <input
-            type="text"
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Имя сотрудника"
             value={newUserName}
             onChange={(e) => setNewUserName(e.target.value)}
-            placeholder="Имя сотрудника"
             autoFocus
+            margin="dense"
           />
-          <div className="user-form-actions">
-            <button onClick={handleAddUser}>Сохранить</button>
-            <button
-              className="cancel-button"
+          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleAddUser}
+            >
+              Сохранить
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
               onClick={() => {
                 setIsAddingUser(false);
                 setNewUserName('');
               }}
             >
               Отмена
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Stack>
+        </Box>
       )}
 
-      <div className="users-container">
-        {users.map((user) => (
-          <div
-            key={user.id}
-            className={`user-item ${selectedUserId === user.id ? 'selected' : ''}`}
-            onClick={() => onUserSelect(user.id)}
-          >
-            <span className="user-color" style={{ backgroundColor: user.color }}></span>
-            <span className="user-name">{user.name}</span>
-            <button className="delete-button" onClick={(e) => {
-              e.stopPropagation();
-              onUserDelete(user.id);
-            }}>
-              ✕
-            </button>
-          </div>
+      <List sx={{ maxHeight: 300, overflow: 'auto' }}>
+        {users.map((user, index) => (
+          <React.Fragment key={user.id}>
+            <ListItem
+              button
+              selected={selectedUserId === user.id}
+              onClick={() => onUserSelect(user.id)}
+              secondaryAction={
+                <IconButton
+                  edge="end"
+                  aria-label="delete"
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUserDelete(user.id);
+                  }}
+                >
+                  <Close fontSize="small" />
+                </IconButton>
+              }
+              sx={{ borderRadius: 1 }}
+            >
+              <Box
+                sx={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  bgcolor: user.color,
+                  mr: 1.5
+                }}
+              />
+              <Typography>{user.name}</Typography>
+            </ListItem>
+            {index < users.length - 1 && <Divider />}
+          </React.Fragment>
         ))}
-      </div>
-    </div>
+      </List>
+    </Paper>
   );
 };
 
