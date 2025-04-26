@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getDate } from 'date-fns';
-import { User, VacationPeriod } from '../types';
+import { Employee, VacationPeriod } from '../types';
 import { generateCalendarForYear, getMonthName, isDateInRange } from '../utils/dateUtils';
 import { isRussianHolidaySync, isShortWorkDaySync } from '../utils/holidayUtils';
 import { useCalendarStore } from '../utils/store';
 
 interface CalendarProps {
   year: number;
-  onVacationSelect?: (vacation: VacationPeriod | null, user: User | null) => void;
+  onVacationSelect?: (vacation: VacationPeriod | null, employee: Employee | null) => void;
 }
 
 const Calendar: React.FC<CalendarProps> = ({
@@ -15,9 +15,9 @@ const Calendar: React.FC<CalendarProps> = ({
   onVacationSelect
 }) => {
   const {
-    users,
+    employees,
     vacations,
-    selectedUserId,
+    selectedEmployeeId,
     selectionStart: externalSelectionStart,
     selectedVacationForDelete,
     handleDaySelect: onDaySelect
@@ -28,7 +28,7 @@ const Calendar: React.FC<CalendarProps> = ({
   const [selectionStart, setSelectionStart] = useState<Date | null>(null);
   const [selectedVacation, setSelectedVacation] = useState<VacationPeriod | null>(null);
 
-  const selectedUser = selectedUserId ? users.find(user => user.id === selectedUserId) : null;
+  const selectedEmployee = selectedEmployeeId ? employees.find(employee => employee.id === selectedEmployeeId) : null;
 
   useEffect(() => {
     setSelectionStart(externalSelectionStart);
@@ -49,23 +49,23 @@ const Calendar: React.FC<CalendarProps> = ({
   }, [selectionStart]);
 
   useEffect(() => {
-    if (selectedUserId) {
+    if (selectedEmployeeId) {
       setSelectedVacation(null);
     }
-  }, [selectedUserId]);
+  }, [selectedEmployeeId]);
 
   const handleDayClick = (date: Date, event?: React.MouseEvent) => {
     if (event && event.defaultPrevented) {
       return;
     }
 
-    if (selectedUserId) {
+    if (selectedEmployeeId) {
       const vacationsForDate = getVacationsForDate(date);
-      const userHasVacationOnDate = vacationsForDate.some(
-        ({ vacation }) => vacation.userId === selectedUserId
+      const employeeHasVacationOnDate = vacationsForDate.some(
+        ({ vacation }) => vacation.employeeId === selectedEmployeeId
       );
 
-      if (userHasVacationOnDate) {
+      if (employeeHasVacationOnDate) {
         return;
       }
 
@@ -87,8 +87,8 @@ const Calendar: React.FC<CalendarProps> = ({
     }
   };
 
-  const handleVacationSegmentClick = (vacation: VacationPeriod, user: User) => {
-    if (selectedUserId) {
+  const handleVacationSegmentClick = (vacation: VacationPeriod, employee: Employee) => {
+    if (selectedEmployeeId) {
       if (!selectionStart) {
         setSelectionStart(vacation.startDate);
       } else {
@@ -100,7 +100,7 @@ const Calendar: React.FC<CalendarProps> = ({
 
     setSelectedVacation(vacation);
     if (onVacationSelect) {
-      onVacationSelect(vacation, user);
+      onVacationSelect(vacation, employee);
     }
   };
 
@@ -114,13 +114,13 @@ const Calendar: React.FC<CalendarProps> = ({
     setHoverDate(null);
   };
 
-  const getVacationsForDate = (date: Date): { vacation: VacationPeriod; user: User | undefined }[] => {
+  const getVacationsForDate = (date: Date): { vacation: VacationPeriod; employee: Employee | undefined }[] => {
     const result = [];
 
     for (const vacation of vacations) {
       if (isDateInRange(date, vacation.startDate, vacation.endDate)) {
-        const user = users.find(u => u.id === vacation.userId);
-        result.push({ vacation, user });
+        const employee = employees.find(emp => emp.id === vacation.employeeId);
+        result.push({ vacation, employee });
       }
     }
 
@@ -128,7 +128,7 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   const isInPreviewRange = (date: Date): boolean => {
-    if (!selectedUserId || !selectionStart || !hoverDate) return false;
+    if (!selectedEmployeeId || !selectionStart || !hoverDate) return false;
 
     const startTimestamp = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate()).getTime();
     const hoverTimestamp = new Date(hoverDate.getFullYear(), hoverDate.getMonth(), hoverDate.getDate()).getTime();
@@ -175,7 +175,7 @@ const Calendar: React.FC<CalendarProps> = ({
       classNames += ' vacation';
     }
 
-    if (selectedUserId) {
+    if (selectedEmployeeId) {
       if (isStart) classNames += ' start-date';
       else if (isPreviewRange) classNames += ' preview-range';
 
@@ -183,12 +183,12 @@ const Calendar: React.FC<CalendarProps> = ({
     }
 
     const cellStyle: React.CSSProperties = {};
-    if (selectedUser && isPreviewRange) {
-      cellStyle.backgroundColor = `${selectedUser.color}80`;
+    if (selectedEmployee && isPreviewRange) {
+      cellStyle.backgroundColor = `${selectedEmployee.color}80`;
     }
 
-    if (selectedUser && isStart) {
-      cellStyle.backgroundColor = `${selectedUser.color}B3`;
+    if (selectedEmployee && isStart) {
+      cellStyle.backgroundColor = `${selectedEmployee.color}B3`;
     }
 
     return (
@@ -206,22 +206,22 @@ const Calendar: React.FC<CalendarProps> = ({
 
           {hasVacations && (
             <>
-              {vacationsForDate.map(({ vacation, user }, index) => {
-                if (!user) return null;
+              {vacationsForDate.map(({ vacation, employee }, index) => {
+                if (!employee) return null;
 
                 const segmentWidth = 100 / vacationsForDate.length;
                 const leftPosition = segmentWidth * index;
 
                 const isThisVacationSelected = selectedVacation && selectedVacation.id === vacation.id;
 
-                const isSelectedUserVacation = selectedUserId && vacation.userId === selectedUserId;
+                const isSelectedEmployeeVacation = selectedEmployeeId && vacation.employeeId === selectedEmployeeId;
 
                 let segmentClass = "vacation-segment";
-                if (isThisVacationSelected || isSelectedUserVacation) {
+                if (isThisVacationSelected || isSelectedEmployeeVacation) {
                   segmentClass += " selected-vacation-segment";
                 }
 
-                const isDisabled = selectedUserId && vacation.userId === selectedUserId;
+                const isDisabled = selectedEmployeeId && vacation.employeeId === selectedEmployeeId;
 
                 return (
                   <div
@@ -230,12 +230,12 @@ const Calendar: React.FC<CalendarProps> = ({
                     style={{
                       left: `${leftPosition}%`,
                       width: `${segmentWidth}%`,
-                      backgroundColor: user.color
+                      backgroundColor: employee.color
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (!isDisabled) {
-                        handleVacationSegmentClick(vacation, user);
+                        handleVacationSegmentClick(vacation, employee);
                       }
                     }}
                   >
@@ -244,9 +244,9 @@ const Calendar: React.FC<CalendarProps> = ({
               })}
 
               <div className="vacation-tooltip">
-                {vacationsForDate.map(({ user }, index) => (
+                {vacationsForDate.map(({ employee }, index) => (
                   <div key={index}>
-                    {user ? user.name : 'Неизвестный сотрудник'}
+                    {employee ? employee.name : 'Неизвестный сотрудник'}
                   </div>
                 ))}
               </div>
@@ -261,10 +261,10 @@ const Calendar: React.FC<CalendarProps> = ({
   const secondHalfMonths = calendar.slice(6, 12);
 
   React.useEffect(() => {
-    if (!selectedUserId) {
+    if (!selectedEmployeeId) {
       setSelectionStart(null);
     }
-  }, [selectedUserId]);
+  }, [selectedEmployeeId]);
 
   return (
     <div className="calendar">

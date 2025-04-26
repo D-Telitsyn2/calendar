@@ -1,46 +1,59 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, Timestamp, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { VacationPeriod } from '../types';
 
-const VACATIONS_COLLECTION = 'vacations';
+// Отпуска хранятся в коллекции vacations, с документами, которые содержат информацию о userId
 
 interface FirebaseVacationData {
-  userId: string;
   startDate: Timestamp;
   endDate: Timestamp;
+  employeeId: string;
+  accountId: string;
 }
 
 const toFirebaseVacation = (vacation: Omit<VacationPeriod, 'id'>): FirebaseVacationData => {
   return {
-    userId: vacation.userId,
     startDate: Timestamp.fromDate(vacation.startDate),
-    endDate: Timestamp.fromDate(vacation.endDate)
+    endDate: Timestamp.fromDate(vacation.endDate),
+    employeeId: vacation.employeeId,
+    accountId: vacation.accountId
   };
 };
 
 const fromFirebaseVacation = (id: string, data: FirebaseVacationData): VacationPeriod => {
   return {
     id,
-    userId: data.userId,
+    employeeId: data.employeeId,
+    accountId: data.accountId,
     startDate: data.startDate.toDate(),
     endDate: data.endDate.toDate()
   };
 };
 
-export const getVacations = async (): Promise<VacationPeriod[]> => {
-  const querySnapshot = await getDocs(collection(db, VACATIONS_COLLECTION));
-  return querySnapshot.docs.map(doc => fromFirebaseVacation(doc.id, doc.data() as FirebaseVacationData));
+export const getVacations = async (accountId: string): Promise<VacationPeriod[]> => {
+  const vacationsCollection = collection(db, 'vacations');
+  const q = query(vacationsCollection, where('accountId', '==', accountId));
+  const querySnapshot = await getDocs(q);
+
+  return querySnapshot.docs.map(doc =>
+    fromFirebaseVacation(doc.id, doc.data() as FirebaseVacationData)
+  );
 };
 
-export const getUserVacations = async (userId: string): Promise<VacationPeriod[]> => {
-  const q = query(collection(db, VACATIONS_COLLECTION), where("userId", "==", userId));
+export const getEmployeeVacations = async (employeeId: string): Promise<VacationPeriod[]> => {
+  const vacationsCollection = collection(db, 'vacations');
+  const q = query(vacationsCollection, where('employeeId', '==', employeeId));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => fromFirebaseVacation(doc.id, doc.data() as FirebaseVacationData));
+
+  return querySnapshot.docs.map(doc =>
+    fromFirebaseVacation(doc.id, doc.data() as FirebaseVacationData)
+  );
 };
 
 export const addVacation = async (vacation: Omit<VacationPeriod, 'id'>): Promise<VacationPeriod> => {
   const firebaseVacation = toFirebaseVacation(vacation);
-  const docRef = await addDoc(collection(db, VACATIONS_COLLECTION), firebaseVacation);
+  const docRef = await addDoc(collection(db, 'vacations'), firebaseVacation);
+
   return {
     id: docRef.id,
     ...vacation
@@ -48,7 +61,7 @@ export const addVacation = async (vacation: Omit<VacationPeriod, 'id'>): Promise
 };
 
 export const updateVacation = async (id: string, vacationData: Partial<Omit<VacationPeriod, 'id'>>): Promise<void> => {
-  const vacationRef = doc(db, VACATIONS_COLLECTION, id);
+  const vacationRef = doc(db, 'vacations', id);
   const updates: Record<string, Timestamp | string> = {};
 
   if (vacationData.startDate) {
@@ -59,26 +72,42 @@ export const updateVacation = async (id: string, vacationData: Partial<Omit<Vaca
     updates.endDate = Timestamp.fromDate(vacationData.endDate);
   }
 
-  if (vacationData.userId) {
-    updates.userId = vacationData.userId;
+  if (vacationData.employeeId) {
+    updates.employeeId = vacationData.employeeId;
   }
 
   await updateDoc(vacationRef, updates);
 };
 
 export const deleteVacation = async (id: string): Promise<void> => {
-  const vacationRef = doc(db, VACATIONS_COLLECTION, id);
+  const vacationRef = doc(db, 'vacations', id);
   await deleteDoc(vacationRef);
 };
 
-export const deleteUserVacations = async (userId: string): Promise<void> => {
-  const vacationsCollection = collection(db, VACATIONS_COLLECTION);
-  const q = query(vacationsCollection, where("userId", "==", userId));
+export const deleteEmployeeVacations = async (employeeId: string, accountId: string): Promise<void> => {
+  const vacationsCollection = collection(db, 'vacations');
+  const q = query(
+    vacationsCollection,
+    where('employeeId', '==', employeeId),
+    where('accountId', '==', accountId)
+  );
   const querySnapshot = await getDocs(q);
 
   await Promise.all(
     querySnapshot.docs.map(document =>
-      deleteDoc(doc(db, VACATIONS_COLLECTION, document.id))
+      deleteDoc(doc(db, 'vacations', document.id))
+    )
+  );
+};
+
+export const deleteAllAccountVacations = async (accountId: string): Promise<void> => {
+  const vacationsCollection = collection(db, 'vacations');
+  const q = query(vacationsCollection, where('accountId', '==', accountId));
+  const querySnapshot = await getDocs(q);
+
+  await Promise.all(
+    querySnapshot.docs.map(document =>
+      deleteDoc(doc(db, 'vacations', document.id))
     )
   );
 };

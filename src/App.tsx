@@ -1,66 +1,77 @@
-import { useRef, useEffect, KeyboardEvent } from 'react'
+import { useRef, useEffect, KeyboardEvent, useState } from 'react'
 import './App.css'
 import Calendar from './components/Calendar'
 import Loader from './components/Loader'
+import { Auth } from './components/Auth'
 import { useCalendarStore } from './utils/store'
 import { getCurrentYear, formatDate } from './utils/dateUtils'
+import { onUserChanged, logout } from './services/authService';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 function App() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
   const {
-    users,
+    employees,
     isLoading,
-    selectedUserId,
+    selectedEmployeeId,
     selectionStart,
-    isAddingUser,
-    newUserName,
+    isAddingEmployee,
+    newEmployeeName,
     isResetting,
-    isDeletingUser,
-    isAddingUserLoading,
+    isDeletingEmployee,
+    isAddingEmployeeLoading,
     selectedVacationForDelete,
 
     loadData,
-    selectUser,
-    addNewUser,
-    setNewUserName,
-    cancelAddingUser,
-    startAddingUser,
-    deleteUserById,
+    selectEmployee,
+    addNewEmployee,
+    setNewEmployeeName,
+    cancelAddingEmployee,
+    startAddingEmployee,
+    deleteEmployeeById,
     cancelSelection,
     selectVacation,
     deleteVacation,
-    deleteAllUserVacations,
+    deleteAllEmployeeVacations,
     resetDatabaseData
   } = useCalendarStore();
 
   const currentYear = getCurrentYear();
   const calendarRef = useRef<HTMLDivElement>(null);
-  const userChipsRef = useRef<HTMLDivElement>(null);
+  const employeeChipsRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
 
-  // Загружаем данные при монтировании компонента
+  // Check authentication status on component mount
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const unsubscribe = onUserChanged((currentUser) => {
+      setUser(currentUser);
+      setAuthChecking(false);
+    });
 
-  // Обработчик нажатия клавиш для добавления пользователя
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      addNewUser();
+    return () => unsubscribe();
+  }, []);
+
+  // Загружаем данные при монтировании компонента или изменении пользователя
+  useEffect(() => {
+    if (user) {
+      loadData();
     }
-  };
+  }, [user, loadData]);
 
   // Обработчик клика вне области выбора
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
-      if (calendarRef.current && userChipsRef.current) {
+      if (calendarRef.current && employeeChipsRef.current) {
         const isClickInsideCalendar = calendarRef.current.contains(event.target as Node);
-        const isClickInsideUserChips = userChipsRef.current.contains(event.target as Node);
+        const isClickInsideEmployeeChips = employeeChipsRef.current.contains(event.target as Node);
         const buttonsContainerRef = document.querySelector('.header-actions');
         const isClickInsideButtons = buttonsContainerRef && buttonsContainerRef.contains(event.target as Node);
 
-        if (!isClickInsideCalendar && !isClickInsideUserChips && !isClickInsideButtons) {
-          if (selectedUserId) {
-            useCalendarStore.setState({ selectedUserId: null, selectionStart: null });
+        if (!isClickInsideCalendar && !isClickInsideEmployeeChips && !isClickInsideButtons) {
+          if (selectedEmployeeId) {
+            useCalendarStore.setState({ selectedEmployeeId: null, selectionStart: null });
           }
 
           if (selectedVacationForDelete) {
@@ -75,7 +86,22 @@ function App() {
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [selectedUserId, selectedVacationForDelete]);
+  }, [selectedEmployeeId, selectedVacationForDelete]);
+
+  // Обработчик нажатия клавиш для добавления сотрудника
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      addNewEmployee();
+    }
+  };
+
+  if (authChecking) {
+    return <Loader />;
+  }
+
+  if (!user) {
+    return <Auth />;
+  }
 
   if (isLoading) {
     return <Loader />;
@@ -84,94 +110,104 @@ function App() {
   return (
     <div className="app">
       <header className="app-header" ref={headerRef}>
-        <h1>Календарь отпусков {currentYear}</h1>
+        <div className="header-container">
+          <h1>Календарь отпусков {currentYear}</h1>
+        </div>
 
-        <div className="header-actions">
-          {!isAddingUser ? (
-            <>
-              <button
-                className="add-user-button"
-                onClick={startAddingUser}
-              >
-                + Добавить сотрудника
-              </button>
-
-              {selectionStart && selectedUserId && (
-                <button
-                  className="cancel-selection-button"
-                  onClick={cancelSelection}
-                >
-                  Отменить выбор даты ({formatDate(selectionStart)})
-                </button>
-              )}
-
-              {selectedUserId && !selectionStart && (
-                <button
-                  className="delete-all-vacations-button"
-                  onClick={deleteAllUserVacations}
-                >
-                  Удалить все отпуска {users.find(u => u.id === selectedUserId)?.name}
-                </button>
-              )}
-
-              {selectedVacationForDelete && (
-                <button
-                  className="delete-vacation-button"
-                  onClick={deleteVacation}
-                >
-                  Удалить отпуск для {selectedVacationForDelete.user.name}
-                </button>
-              )}
-
-              <button
-                className="reset-database-button"
-                onClick={resetDatabaseData}
-                disabled={isResetting}
-              >
-                {isResetting ? 'Очистка...' : 'Очистить базу данных'}
-              </button>
-            </>
-          ) : (
-            <div className="user-form-inline">
-              <input
-                type="text"
-                value={newUserName}
-                onChange={(e) => setNewUserName(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Имя сотрудника"
-                autoFocus
-              />
-              <div className="user-form-actions">
-                <button onClick={addNewUser} disabled={isAddingUserLoading}>
-                  {isAddingUserLoading ? 'Сохранение...' : 'Сохранить'}
-                </button>
-                <button
-                  className="cancel-button"
-                  onClick={cancelAddingUser}
-                >
-                  Отмена
-                </button>
-              </div>
+        <div className="app-header-actions">
+          <div className="user-info">
+              <span className="user-email">{user.email}</span>
+              <button onClick={logout} className="logout-button">Выйти</button>
             </div>
-          )}
+          <div className="header-actions">
+            {!isAddingEmployee ? (
+              <>
+                <button
+                  className="add-user-button"
+                  onClick={startAddingEmployee}
+                >
+                  + Добавить сотрудника
+                </button>
+
+                {selectionStart && selectedEmployeeId && (
+                  <button
+                    className="cancel-selection-button"
+                    onClick={cancelSelection}
+                  >
+                    Отменить выбор даты ({formatDate(selectionStart)})
+                  </button>
+                )}
+
+                {selectedEmployeeId && !selectionStart && (
+                  <button
+                    className="delete-all-vacations-button"
+                    onClick={deleteAllEmployeeVacations}
+                  >
+                    Удалить все отпуска {employees.find(e => e.id === selectedEmployeeId)?.name}
+                  </button>
+                )}
+
+                {selectedVacationForDelete && (
+                  <button
+                    className="delete-vacation-button"
+                    onClick={deleteVacation}
+                  >
+                    Удалить отпуск для {selectedVacationForDelete.employee.name}
+                  </button>
+                )}
+
+                <button
+                  className="reset-database-button"
+                  onClick={resetDatabaseData}
+                  disabled={isResetting}
+                >
+                  {isResetting ? <span className="button-spinner"></span> : 'Очистить базу данных'}
+                </button>
+              </>
+            ) : (
+              <div className="user-form-inline">
+                <input
+                  type="text"
+                  value={newEmployeeName}
+                  onChange={(e) => setNewEmployeeName(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Имя сотрудника"
+                  autoFocus
+                />
+                <div className="user-form-actions">
+                  <button onClick={addNewEmployee} disabled={isAddingEmployeeLoading}>
+                    {isAddingEmployeeLoading ? <span className="button-spinner"></span> : 'Сохранить'}
+                  </button>
+                  <button
+                    className="cancel-button"
+                    onClick={cancelAddingEmployee}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       <div className="app-container">
-        <div className="users-chips" ref={userChipsRef}>
-          {users.map((user) => (
+        <div className="users-chips" ref={employeeChipsRef}>
+          {employees.map((employee) => (
             <div
-              key={user.id}
-              className={`user-chip ${selectedUserId === user.id ? 'selected' : ''}`}
-              onClick={() => selectUser(user.id)}
+              key={employee.id}
+              className={`user-chip ${selectedEmployeeId === employee.id ? 'selected' : ''}`}
+              onClick={() => selectEmployee(employee.id)}
             >
-              <span className="user-color" style={{ backgroundColor: user.color }}></span>
-              <span className="user-name">{user.name}</span>
+              <span className="user-color" style={{ backgroundColor: employee.color }}></span>
+              <span className="user-name">{employee.name}</span>
               <button className="delete-button" onClick={(e) => {
                 e.stopPropagation();
-                deleteUserById(user.id);
-              }} disabled={isDeletingUser === user.id}>
-                {isDeletingUser === user.id ? 'Удаление...' : '✕'}
+                deleteEmployeeById(employee.id);
+              }} disabled={isDeletingEmployee === employee.id}>
+                {isDeletingEmployee === employee.id ? (
+                  <span className="mini-spinner"></span>
+                ) : '✕'}
               </button>
             </div>
           ))}

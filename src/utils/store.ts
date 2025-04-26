@@ -1,156 +1,168 @@
 import { create } from 'zustand';
 import { getCurrentYear, generateUniqueColor } from './dateUtils';
-import { getUsers, addUser, deleteUser } from '../services/userService';
-import { getVacations, addVacation, deleteVacation, deleteUserVacations } from '../services/vacationService';
+import { getEmployees, addEmployee, deleteEmployee, deleteAllEmployees } from '../services/employeeService';
+import { getVacations, addVacation, deleteVacation, deleteEmployeeVacations, deleteAllAccountVacations } from '../services/vacationService';
 import { preloadHolidaysForYear } from './holidayUtils';
-import { User, VacationPeriod } from '../types';
-import { resetDatabase } from './resetDatabase';
+import { Employee, VacationPeriod } from '../types';
+import { getCurrentUser } from '../services/authService';
 
 interface CalendarState {
-  users: User[];
+  employees: Employee[];
   vacations: VacationPeriod[];
   isLoading: boolean;
-  selectedUserId: string | null;
+  selectedEmployeeId: string | null;
   selectionStart: Date | null;
-  isAddingUser: boolean;
-  newUserName: string;
+  isAddingEmployee: boolean;
+  newEmployeeName: string;
   isResetting: boolean;
-  isDeletingUser: string | null;
-  isAddingUserLoading: boolean;
+  isDeletingEmployee: string | null;
+  isAddingEmployeeLoading: boolean;
   selectedVacationForDelete: {
     vacation: VacationPeriod;
-    user: User
+    employee: Employee
   } | null;
   loadData: () => Promise<void>;
-  selectUser: (userId: string) => void;
-  addNewUser: () => Promise<void>;
-  setNewUserName: (name: string) => void;
-  cancelAddingUser: () => void;
-  startAddingUser: () => void;
-  deleteUserById: (userId: string) => Promise<void>;
+  selectEmployee: (employeeId: string) => void;
+  addNewEmployee: () => Promise<void>;
+  setNewEmployeeName: (name: string) => void;
+  cancelAddingEmployee: () => void;
+  startAddingEmployee: () => void;
+  deleteEmployeeById: (employeeId: string) => Promise<void>;
   handleDaySelect: (date: Date | null) => Promise<void>;
   cancelSelection: () => void;
-  selectVacation: (vacation: VacationPeriod | null, user: User | null) => void;
+  selectVacation: (vacation: VacationPeriod | null, employee: Employee | null) => void;
   deleteVacation: () => Promise<void>;
-  deleteAllUserVacations: () => Promise<void>;
+  deleteAllEmployeeVacations: () => Promise<void>;
   resetDatabaseData: () => Promise<void>;
 }
 
 export const useCalendarStore = create<CalendarState>((set, get) => ({
-  users: [],
+  employees: [],
   vacations: [],
   isLoading: true,
-  selectedUserId: null,
+  selectedEmployeeId: null,
   selectionStart: null,
-  isAddingUser: false,
-  newUserName: '',
+  isAddingEmployee: false,
+  newEmployeeName: '',
   isResetting: false,
-  isDeletingUser: null,
-  isAddingUserLoading: false,
+  isDeletingEmployee: null,
+  isAddingEmployeeLoading: false,
   selectedVacationForDelete: null,
 
   loadData: async () => {
     try {
       set({ isLoading: true });
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        set({ employees: [], vacations: [], isLoading: false });
+        return;
+      }
+      const accountId = currentUser.uid;
       const currentYear = getCurrentYear();
 
-      const [loadedUsers, loadedVacations] = await Promise.all([
-        getUsers(),
-        getVacations(),
-        preloadHolidaysForYear(currentYear)
-      ]);
+      try {
+        const [loadedEmployees, loadedVacations] = await Promise.all([
+          getEmployees(accountId),
+          getVacations(accountId),
+          preloadHolidaysForYear(currentYear)
+        ]);
 
-      set({
-        users: loadedUsers,
-        vacations: loadedVacations,
-        isLoading: false
-      });
+        set({
+          employees: loadedEmployees || [],
+          vacations: loadedVacations,
+          isLoading: false
+        });
+      } catch (dataError) {
+        console.error('Ошибка при загрузке данных:', dataError);
+        set({
+          employees: [],
+          vacations: [],
+          isLoading: false
+        });
+      }
     } catch (error) {
       console.error('Ошибка при загрузке данных:', error);
       set({ isLoading: false });
     }
   },
 
-  selectUser: (userId) => {
+  selectEmployee: (employeeId) => {
     set({
-      selectedUserId: userId,
+      selectedEmployeeId: employeeId,
       selectionStart: null
     });
   },
 
-  addNewUser: async () => {
-    const { newUserName, users } = get();
-
-    if (!newUserName.trim()) return;
+  addNewEmployee: async () => {
+    const { newEmployeeName, employees } = get();
+    const currentUser = getCurrentUser();
+    if (!currentUser || !newEmployeeName.trim()) return;
 
     try {
-      set({ isAddingUserLoading: true });
-
-      const existingColors = users.map(user => user.color);
+      set({ isAddingEmployeeLoading: true });
+      const accountId = currentUser.uid;
+      const existingColors = employees.map(employee => employee.color);
       const newColor = generateUniqueColor(existingColors);
 
-      const newUser: Omit<User, 'id'> = {
-        name: newUserName.trim(),
-        color: newColor
+      const newEmployee: Omit<Employee, 'id'> = {
+        name: newEmployeeName.trim(),
+        color: newColor,
+        accountId
       };
 
-      const addedUser = await addUser(newUser);
+      const createdEmployee = await addEmployee(newEmployee);
 
       set(state => ({
-        users: [...state.users, addedUser],
-        newUserName: '',
-        isAddingUser: false,
-        isAddingUserLoading: false
+        employees: [...state.employees, createdEmployee],
+        newEmployeeName: '',
+        isAddingEmployee: false,
+        isAddingEmployeeLoading: false
       }));
     } catch (error) {
-      console.error('Ошибка при добавлении пользователя:', error);
-      set({ isAddingUserLoading: false });
+      console.error('Ошибка при добавлении сотрудника:', error);
+      set({ isAddingEmployeeLoading: false });
     }
   },
 
-  setNewUserName: (name) => set({ newUserName: name }),
+  setNewEmployeeName: (name) => set({ newEmployeeName: name }),
 
-  cancelAddingUser: () => set({ isAddingUser: false, newUserName: '' }),
+  cancelAddingEmployee: () => set({ isAddingEmployee: false, newEmployeeName: '' }),
 
-  startAddingUser: () => set({ isAddingUser: true }),
+  startAddingEmployee: () => set({ isAddingEmployee: true }),
 
-  deleteUserById: async (userId) => {
-    if (!userId) return;
+  deleteEmployeeById: async (employeeId) => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
 
     try {
-      set(state => ({
-        isDeletingUser: userId,
-        users: state.users.filter(user => user.id !== userId),
-        vacations: state.vacations.filter(vacation => vacation.userId !== userId),
-        selectedUserId: state.selectedUserId === userId ? null : state.selectedUserId,
-        selectionStart: state.selectedUserId === userId ? null : state.selectionStart
-      }));
+      set({ isDeletingEmployee: employeeId });
+      const accountId = currentUser.uid;
 
-      await Promise.all([
-        deleteUserVacations(userId),
-        deleteUser(userId)
-      ]);
+      // Сначала удаляем все отпуска сотрудника
+      await deleteEmployeeVacations(employeeId, accountId);
+
+      // Затем удаляем самого сотрудника
+      await deleteEmployee(employeeId);
+
+      // Обновляем состояние
+      set(state => ({
+        employees: state.employees.filter(e => e.id !== employeeId),
+        vacations: state.vacations.filter(v => v.employeeId !== employeeId),
+        selectedEmployeeId: null,
+        selectionStart: null,
+        isDeletingEmployee: null
+      }));
     } catch (error) {
-      console.error('Ошибка при удалении пользователя:', error);
-      try {
-        const [loadedUsers, loadedVacations] = await Promise.all([
-          getUsers(),
-          getVacations()
-        ]);
-        set({ users: loadedUsers, vacations: loadedVacations });
-      } catch {
-        // Игнорируем ошибку
-      }
-      alert('Ошибка при удалении пользователя.');
-    } finally {
-      set({ isDeletingUser: null });
+      console.error('Ошибка при удалении сотрудника:', error);
+      alert('Ошибка при удалении сотрудника.');
+      set({ isDeletingEmployee: null });
     }
   },
 
   handleDaySelect: async (date) => {
-    const { selectedUserId, selectionStart } = get();
-
-    if (!selectedUserId) return;
+    const { selectedEmployeeId, selectionStart } = get();
+    const currentUser = getCurrentUser();
+    if (!currentUser || !selectedEmployeeId) return;
 
     if (date === null) {
       set({ selectionStart: null });
@@ -163,11 +175,13 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     }
 
     try {
+      const accountId = currentUser.uid;
       const normalizedSelectionStart = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate());
       const normalizedEndDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
       const newVacation: Omit<VacationPeriod, 'id'> = {
-        userId: selectedUserId,
+        employeeId: selectedEmployeeId,
+        accountId,
         startDate: new Date(Math.min(normalizedSelectionStart.getTime(), normalizedEndDate.getTime())),
         endDate: new Date(Math.max(normalizedSelectionStart.getTime(), normalizedEndDate.getTime()))
       };
@@ -185,104 +199,90 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
   cancelSelection: () => set({ selectionStart: null }),
 
-  selectVacation: (vacation, user) => {
-    if (!vacation || !user) {
+  selectVacation: (vacation, employee) => {
+    if (!vacation || !employee) {
       set({ selectedVacationForDelete: null });
       return;
     }
 
-    if (get().selectedUserId) {
+    if (get().selectedEmployeeId) {
       return;
     }
 
-    set(() => ({
-      selectedVacationForDelete: { vacation, user },
-      selectedUserId: null,
+    set({
+      selectedVacationForDelete: { vacation, employee },
+      selectedEmployeeId: null,
       selectionStart: null
-    }));
+    });
   },
 
   deleteVacation: async () => {
     const { selectedVacationForDelete } = get();
-    if (!selectedVacationForDelete) return;
+    const currentUser = getCurrentUser();
+    if (!currentUser || !selectedVacationForDelete) return;
 
     try {
-      set(state => ({
-        vacations: state.vacations.filter(v => v.id !== selectedVacationForDelete.vacation.id)
-      }));
-
       await deleteVacation(selectedVacationForDelete.vacation.id);
 
-      set({ selectedVacationForDelete: null });
+      set(state => ({
+        vacations: state.vacations.filter(v => v.id !== selectedVacationForDelete.vacation.id),
+        selectedVacationForDelete: null
+      }));
     } catch (error) {
       console.error('Ошибка при удалении отпуска:', error);
-
-      try {
-        const loadedVacations = await getVacations();
-        set({ vacations: loadedVacations });
-      } catch {
-        // Игнорируем ошибку
-      }
       alert('Произошла ошибка при удалении отпуска');
     }
   },
 
-  deleteAllUserVacations: async () => {
-    const { selectedUserId, users } = get();
-    if (!selectedUserId) return;
+  deleteAllEmployeeVacations: async () => {
+    const { selectedEmployeeId } = get();
+    const currentUser = getCurrentUser();
+    if (!currentUser || !selectedEmployeeId) return;
 
-    const user = users.find(u => u.id === selectedUserId);
-    if (!user) return;
-
-    if (!confirm(`Вы действительно хотите удалить ВСЕ отпуска сотрудника ${user.name}?`)) {
+    if (!confirm('Вы действительно хотите удалить ВСЕ отпуска этого сотрудника?')) {
       return;
     }
 
     try {
+      const accountId = currentUser.uid;
+      await deleteEmployeeVacations(selectedEmployeeId, accountId);
+
       set(state => ({
-        vacations: state.vacations.filter(vacation => vacation.userId !== selectedUserId)
-      }));
-
-      await deleteUserVacations(selectedUserId);
-
-      set({
-        selectedUserId: null,
+        vacations: state.vacations.filter(v => v.employeeId !== selectedEmployeeId),
+        selectedEmployeeId: null,
         selectionStart: null
-      });
+      }));
     } catch (error) {
-      console.error('Ошибка при удалении отпусков пользователя:', error);
-
-      try {
-        const loadedVacations = await getVacations();
-        set({ vacations: loadedVacations });
-      } catch {
-        // Игнорируем ошибку
-      }
+      console.error('Ошибка при удалении отпусков сотрудника:', error);
       alert('Произошла ошибка при удалении отпусков');
     }
   },
 
   resetDatabaseData: async () => {
-    if (!confirm('Вы действительно хотите удалить ВСЕ данные (пользователей и отпуска)?')) {
+    if (!confirm('Вы действительно хотите удалить ВСЕ данные (сотрудников и отпуска)?')) {
       return;
     }
 
     try {
       set({ isResetting: true });
-      await resetDatabase();
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        const accountId = currentUser.uid;
+        await deleteAllAccountVacations(accountId);
+        await deleteAllEmployees(accountId);
+      }
 
       set({
-        users: [],
+        employees: [],
         vacations: [],
-        selectedUserId: null,
+        selectedEmployeeId: null,
         selectionStart: null,
       });
 
-      alert('База данных успешно очищена. Приложение будет перезагружено.');
-      window.location.reload();
+      alert('База данных успешно очищена.');
     } catch (error) {
       console.error('Ошибка при сбросе базы данных:', error);
-      alert('Произошла ошибка при очистке базы данных. Подробности в консоли.');
+      alert('Произошла ошибка при очистке базы данных.');
     } finally {
       set({ isResetting: false });
     }
