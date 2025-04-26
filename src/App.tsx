@@ -17,7 +17,6 @@ import {
   Box,
   Chip,
   Avatar,
-  Stack,
   Paper,
   Container
 } from '@mui/material';
@@ -134,15 +133,70 @@ function App() {
   return (
     <Box className="app">
       <AppBar position='static' elevation={0} color="transparent" ref={headerRef}>
-        <Toolbar>
-          <Box>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
+        <Toolbar sx={{
+          flexDirection: { xs: 'column', sm: 'row' },
+          py: { xs: 2, sm: 1 },
+          gap: { xs: 2, sm: 0 },
+          position: 'relative',
+          justifyContent: 'space-between'
+        }}>
+          {/* Title */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'center', sm: 'flex-start' }
+          }}>
+            {/* Logout button on mobile - absolute positioned*/}
+            <Box sx={{
+              position: { xs: 'absolute', sm: 'static' },
+              top: 0,
+              right: 0,
+              display: { xs: 'flex', alignItems: 'center', sm: 'none' }
+            }}>
+              <Typography variant="body2" sx={{mr: 1}}>{user.email}</Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                color="inherit"
+                startIcon={<LogoutIcon />}
+                onClick={logout}
+                sx={{ minWidth: '40px' }}
+              >
+                <Box>Выйти</Box>
+              </Button>
+            </Box>
+
+            {/* Title */}
+            <Typography
+              variant="h5"
+              component="h1"
+              sx={{
+                fontWeight: 'bold',
+                fontSize: { xs: '1.2rem', sm: '1.5rem' },
+                mt: { xs: 3, sm: 0 }
+              }}
+            >
               Календарь отпусков {currentYear}
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ justifyContent: "flex-end", flexGrow: 1 }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {/* Action buttons and user info - in the middle on desktop */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: { sm: 'end' },
+            mr: { xs: 0, sm: 2 },
+            gap: { xs: 1, sm: 2 },
+            width: { xs: '100%', sm: 'auto' },
+            flexGrow: 1,
+          }}>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 1,
+              alignItems: { xs: 'stretch', sm: 'center' }
+            }}>
               {!isAddingEmployee ? (
                 <>
                   <Button
@@ -151,6 +205,7 @@ function App() {
                     startIcon={<AddIcon />}
                     onClick={startAddingEmployee}
                     size="small"
+                    fullWidth={window.innerWidth < 600}
                   >
                     Добавить
                   </Button>
@@ -162,6 +217,7 @@ function App() {
                       startIcon={<CancelIcon />}
                       onClick={cancelSelection}
                       size="small"
+                      fullWidth={window.innerWidth < 600}
                     >
                       Отмена ({formatDate(selectionStart)})
                     </Button>
@@ -174,6 +230,7 @@ function App() {
                       startIcon={<DeleteForeverIcon />}
                       onClick={deleteAllEmployeeVacations}
                       size="small"
+                      fullWidth={window.innerWidth < 600}
                     >
                       Удалить отпуска
                     </Button>
@@ -186,13 +243,21 @@ function App() {
                       startIcon={<DeleteForeverIcon />}
                       onClick={deleteVacation}
                       size="small"
+                      fullWidth={window.innerWidth < 600}
                     >
                       Удалить
                     </Button>
                   )}
                 </>
               ) : (
-                <Paper sx={{ p: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Paper sx={{
+                  p: 1,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: 'center',
+                  gap: 1,
+                  width: '100%'
+                }}>
                   <TextField
                     size="small"
                     value={newEmployeeName}
@@ -201,40 +266,58 @@ function App() {
                     placeholder="Имя сотрудника"
                     autoFocus
                     variant="outlined"
+                    fullWidth
                   />
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={addNewEmployee}
-                    disabled={isAddingEmployeeLoading}
-                    size="small"
-                  >
-                    {isAddingEmployeeLoading ? "..." : "Сохранить"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="inherit"
-                    onClick={cancelAddingEmployee}
-                    size="small"
-                  >
-                    Отмена
-                  </Button>
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 1,
+                    width: { xs: '100%', sm: 'auto' }
+                  }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={addNewEmployee}
+                      disabled={isAddingEmployeeLoading}
+                      size="small"
+                      fullWidth={window.innerWidth < 600}
+                    >
+                      {isAddingEmployeeLoading ? "..." : "Сохранить"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="inherit"
+                      onClick={cancelAddingEmployee}
+                      size="small"
+                      fullWidth={window.innerWidth < 600}
+                    >
+                      Отмена
+                    </Button>
+                  </Box>
                 </Paper>
               )}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2">{user.email}</Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                color="inherit"
-                startIcon={<LogoutIcon />}
-                onClick={logout}
-              >
-                Выйти
-              </Button>
-            </Box>
-          </Stack>
+          </Box>
+
+          {/* Desktop email/logout container - right aligned */}
+          <Box sx={{
+            display: { xs: 'none', sm: 'flex' },
+            alignItems: 'center',
+            gap: 1,
+            justifySelf: 'flex-end',
+            ml: 'auto'
+          }}>
+            <Typography variant="body2">{user.email}</Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              color="inherit"
+              startIcon={<LogoutIcon />}
+              onClick={logout}
+            >
+              Выйти
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
 
