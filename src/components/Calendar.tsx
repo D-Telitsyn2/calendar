@@ -3,28 +3,26 @@ import { getDate } from 'date-fns';
 import { User, VacationPeriod } from '../types';
 import { generateCalendarForYear, getMonthName, isDateInRange } from '../utils/dateUtils';
 import { isRussianHolidaySync, isShortWorkDaySync } from '../utils/holidayUtils';
+import { useCalendarStore } from '../utils/store';
 
 interface CalendarProps {
   year: number;
-  users: User[];
-  vacations: VacationPeriod[];
-  selectedUserId: string | null;
-  onDaySelect: (date: Date) => void;
-  externalSelectionStart: Date | null;
-  onVacationSelect?: (vacation: VacationPeriod, user: User) => void;
-  selectedVacationForDelete: { vacation: VacationPeriod; user: User } | null;
+  onVacationSelect?: (vacation: VacationPeriod | null, user: User | null) => void;
 }
 
 const Calendar: React.FC<CalendarProps> = ({
   year,
-  users,
-  vacations,
-  selectedUserId,
-  onDaySelect,
-  externalSelectionStart,
-  onVacationSelect,
-  selectedVacationForDelete
+  onVacationSelect
 }) => {
+  const {
+    users,
+    vacations,
+    selectedUserId,
+    selectionStart: externalSelectionStart,
+    selectedVacationForDelete,
+    handleDaySelect: onDaySelect
+  } = useCalendarStore();
+
   const calendar = generateCalendarForYear(year);
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
   const [selectionStart, setSelectionStart] = useState<Date | null>(null);
@@ -84,7 +82,7 @@ const Calendar: React.FC<CalendarProps> = ({
     if (vacationsForDate.length === 0 && selectedVacation) {
       setSelectedVacation(null);
       if (onVacationSelect) {
-        onVacationSelect(null as unknown as VacationPeriod, null as unknown as User);
+        onVacationSelect(null, null);
       }
     }
   };

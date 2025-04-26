@@ -1,48 +1,55 @@
-import { useState, useEffect, KeyboardEvent, useRef } from 'react'
+import { useRef, useEffect, KeyboardEvent } from 'react'
 import './App.css'
 import Calendar from './components/Calendar'
-import { User, VacationPeriod } from './types'
-import { getCurrentYear, generateUniqueColor, formatDate } from './utils/dateUtils'
-import { getUsers, addUser, deleteUser } from './services/userService'
-import { getVacations, addVacation, deleteUserVacations, deleteVacation } from './services/vacationService'
-import { resetDatabase } from './utils/resetDatabase'
-import { preloadHolidaysForYear } from './utils/holidayUtils'
+import Loader from './components/Loader'
+import { useCalendarStore } from './utils/store'
+import { getCurrentYear, formatDate } from './utils/dateUtils'
 
 function App() {
-  const [users, setUsers] = useState<User[]>([])
-  const [vacations, setVacations] = useState<VacationPeriod[]>([])
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-  const [selectionStart, setSelectionStart] = useState<Date | null>(null)
-  const [isAddingUser, setIsAddingUser] = useState<boolean>(false)
-  const [newUserName, setNewUserName] = useState<string>('')
-  const [isResetting, setIsResetting] = useState<boolean>(false);
-  const [isDeletingUser, setIsDeletingUser] = useState<string | null>(null);
-  const [isAddingUserLoading, setIsAddingUserLoading] = useState<boolean>(false);
-  const [selectedVacationForDelete, setSelectedVacationForDelete] = useState<{ vacation: VacationPeriod; user: User } | null>(null);
-  const currentYear = getCurrentYear()
+  const {
+    users,
+    isLoading,
+    selectedUserId,
+    selectionStart,
+    isAddingUser,
+    newUserName,
+    isResetting,
+    isDeletingUser,
+    isAddingUserLoading,
+    selectedVacationForDelete,
 
+    loadData,
+    selectUser,
+    addNewUser,
+    setNewUserName,
+    cancelAddingUser,
+    startAddingUser,
+    deleteUserById,
+    cancelSelection,
+    selectVacation,
+    deleteVacation,
+    deleteAllUserVacations,
+    resetDatabaseData
+  } = useCalendarStore();
+
+  const currentYear = getCurrentYear();
   const calendarRef = useRef<HTMLDivElement>(null);
   const userChipsRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
 
+  // Загружаем данные при монтировании компонента
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const loadedUsers = await getUsers()
-        const loadedVacations = await getVacations()
+    loadData();
+  }, [loadData]);
 
-        await preloadHolidaysForYear(currentYear);
-
-        setUsers(loadedUsers)
-        setVacations(loadedVacations)
-      } catch (error: unknown) {
-        console.error('Ошибка при загрузке данных:', error instanceof Error ? error.message : error)
-      }
+  // Обработчик нажатия клавиш для добавления пользователя
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      addNewUser();
     }
+  };
 
-    loadData()
-  }, [])
-
+  // Обработчик клика вне области выбора
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
       if (calendarRef.current && userChipsRef.current) {
@@ -53,12 +60,11 @@ function App() {
 
         if (!isClickInsideCalendar && !isClickInsideUserChips && !isClickInsideButtons) {
           if (selectedUserId) {
-            setSelectedUserId(null);
-            setSelectionStart(null);
+            useCalendarStore.setState({ selectedUserId: null, selectionStart: null });
           }
 
           if (selectedVacationForDelete) {
-            setSelectedVacationForDelete(null);
+            useCalendarStore.setState({ selectedVacationForDelete: null });
           }
         }
       }
@@ -71,208 +77,9 @@ function App() {
     };
   }, [selectedUserId, selectedVacationForDelete]);
 
-  const handleUserSelect = (userId: string) => {
-    setSelectedUserId(userId)
-    setSelectionStart(null)
+  if (isLoading) {
+    return <Loader />;
   }
-
-  const handleAddUser = async () => {
-    if (newUserName.trim()) {
-      try {
-        setIsAddingUserLoading(true);
-        const existingColors = users.map(user => user.color);
-        const newColor = generateUniqueColor(existingColors);
-
-        const newUser: Omit<User, 'id'> = {
-          name: newUserName.trim(),
-          color: newColor
-        };
-
-        const addedUser = await addUser(newUser)
-        setUsers([...users, addedUser])
-        setNewUserName('')
-        setIsAddingUser(false)
-      } catch (error: unknown) {
-        console.error('Ошибка при добавлении пользователя:', error instanceof Error ? error.message : error)
-      } finally {
-        setIsAddingUserLoading(false);
-      }
-    }
-  }
-
-  const handleUserDelete = async (userId: string) => {
-    if (!userId) {
-      return;
-    }
-
-    try {
-      setIsDeletingUser(userId);
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-      setVacations(prevVacations => prevVacations.filter(vacation => vacation.userId !== userId));
-
-      if (selectedUserId === userId) {
-        setSelectedUserId(null);
-        setSelectionStart(null);
-      }
-
-      await Promise.all([
-        deleteUserVacations(userId),
-        deleteUser(userId)
-      ]);
-    } catch (error: unknown) {
-      try {
-        const loadedUsers = await getUsers();
-        const loadedVacations = await getVacations();
-        setUsers(loadedUsers);
-        setVacations(loadedVacations);
-      // eslint-disable-next-line no-empty
-      } catch {
-      }
-      alert('Ошибка при удалении пользователя.');
-    } finally {
-      setIsDeletingUser(null);
-    }
-  }
-
-  const handleDaySelect = async (date: Date | null) => {
-    if (!selectedUserId) return
-
-    if (date === null) {
-      setSelectionStart(null)
-      return
-    }
-
-    if (!selectionStart) {
-      setSelectionStart(date)
-      return
-    }
-
-    try {
-      const normalizedSelectionStart = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate());
-      const normalizedEndDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-      const newVacation: Omit<VacationPeriod, 'id'> = {
-        userId: selectedUserId,
-        startDate: new Date(Math.min(normalizedSelectionStart.getTime(), normalizedEndDate.getTime())),
-        endDate: new Date(Math.max(normalizedSelectionStart.getTime(), normalizedEndDate.getTime()))
-      }
-
-      const savedVacation = await addVacation(newVacation)
-
-      setVacations([...vacations, savedVacation])
-      setSelectionStart(null)
-    } catch (error: unknown) {
-      console.error('Ошибка при создании отпуска:', error instanceof Error ? error.message : error)
-    }
-  }
-
-  const handleVacationSelect = (vacation: VacationPeriod | null, user: User | null) => {
-    if (!vacation || !user) {
-      setSelectedVacationForDelete(null);
-      return;
-    }
-
-    if (selectedUserId) {
-      return;
-    }
-
-    setSelectedVacationForDelete({ vacation, user });
-
-    if (selectedUserId) {
-      setSelectedUserId(null);
-      setSelectionStart(null);
-    }
-  };
-
-  const handleResetDatabase = async () => {
-    if (!confirm('Вы действительно хотите удалить ВСЕ данные (пользователей и отпуска)?')) {
-      return;
-    }
-
-    try {
-      setIsResetting(true);
-      await resetDatabase();
-
-      setUsers([]);
-      setVacations([]);
-      setSelectedUserId(null);
-      setSelectionStart(null);
-
-      alert('База данных успешно очищена. Приложение будет перезагружено.');
-      window.location.reload();
-    } catch (error: unknown) {
-      console.error('Ошибка при сбросе базы данных:', error instanceof Error ? error.message : error);
-      alert('Произошла ошибка при очистке базы данных. Подробности в консоли.');
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      handleAddUser();
-    }
-  };
-
-  const handleCancelSelection = () => {
-    setSelectionStart(null);
-  };
-
-  const handleVacationDelete = async () => {
-    if (!selectedVacationForDelete) return;
-
-    try {
-      setVacations(prevVacations =>
-        prevVacations.filter(v => v.id !== selectedVacationForDelete.vacation.id)
-      );
-
-      await deleteVacation(selectedVacationForDelete.vacation.id);
-
-      setSelectedVacationForDelete(null);
-    } catch (error) {
-      console.error('Ошибка при удалении отпуска:', error);
-
-      try {
-        const loadedVacations = await getVacations();
-        setVacations(loadedVacations);
-      // eslint-disable-next-line no-empty
-      } catch {
-      }
-      alert('Произошла ошибка при удалении отпуска');
-    }
-  };
-
-  const handleDeleteAllUserVacations = async () => {
-    if (!selectedUserId) return;
-
-    const user = users.find(u => u.id === selectedUserId);
-    if (!user) return;
-
-    if (!confirm(`Вы действительно хотите удалить ВСЕ отпуска сотрудника ${user.name}?`)) {
-      return;
-    }
-
-    try {
-      setVacations(prevVacations =>
-        prevVacations.filter(vacation => vacation.userId !== selectedUserId)
-      );
-
-      await deleteUserVacations(selectedUserId);
-
-      setSelectedUserId(null);
-      setSelectionStart(null);
-    } catch (error) {
-      console.error('Ошибка при удалении отпусков пользователя:', error);
-
-      try {
-        const loadedVacations = await getVacations();
-        setVacations(loadedVacations);
-        // eslint-disable-next-line no-empty
-      } catch {
-      }
-      alert('Произошла ошибка при удалении отпусков');
-    }
-  };
 
   return (
     <div className="app">
@@ -284,7 +91,7 @@ function App() {
             <>
               <button
                 className="add-user-button"
-                onClick={() => setIsAddingUser(true)}
+                onClick={startAddingUser}
               >
                 + Добавить сотрудника
               </button>
@@ -292,7 +99,7 @@ function App() {
               {selectionStart && selectedUserId && (
                 <button
                   className="cancel-selection-button"
-                  onClick={handleCancelSelection}
+                  onClick={cancelSelection}
                 >
                   Отменить выбор даты ({formatDate(selectionStart)})
                 </button>
@@ -301,7 +108,7 @@ function App() {
               {selectedUserId && !selectionStart && (
                 <button
                   className="delete-all-vacations-button"
-                  onClick={handleDeleteAllUserVacations}
+                  onClick={deleteAllUserVacations}
                 >
                   Удалить все отпуска {users.find(u => u.id === selectedUserId)?.name}
                 </button>
@@ -310,7 +117,7 @@ function App() {
               {selectedVacationForDelete && (
                 <button
                   className="delete-vacation-button"
-                  onClick={handleVacationDelete}
+                  onClick={deleteVacation}
                 >
                   Удалить отпуск для {selectedVacationForDelete.user.name}
                 </button>
@@ -318,7 +125,7 @@ function App() {
 
               <button
                 className="reset-database-button"
-                onClick={handleResetDatabase}
+                onClick={resetDatabaseData}
                 disabled={isResetting}
               >
                 {isResetting ? 'Очистка...' : 'Очистить базу данных'}
@@ -335,15 +142,12 @@ function App() {
                 autoFocus
               />
               <div className="user-form-actions">
-                <button onClick={handleAddUser} disabled={isAddingUserLoading}>
+                <button onClick={addNewUser} disabled={isAddingUserLoading}>
                   {isAddingUserLoading ? 'Сохранение...' : 'Сохранить'}
                 </button>
                 <button
                   className="cancel-button"
-                  onClick={() => {
-                    setIsAddingUser(false);
-                    setNewUserName('');
-                  }}
+                  onClick={cancelAddingUser}
                 >
                   Отмена
                 </button>
@@ -359,13 +163,13 @@ function App() {
             <div
               key={user.id}
               className={`user-chip ${selectedUserId === user.id ? 'selected' : ''}`}
-              onClick={() => handleUserSelect(user.id)}
+              onClick={() => selectUser(user.id)}
             >
               <span className="user-color" style={{ backgroundColor: user.color }}></span>
               <span className="user-name">{user.name}</span>
               <button className="delete-button" onClick={(e) => {
                 e.stopPropagation();
-                handleUserDelete(user.id);
+                deleteUserById(user.id);
               }} disabled={isDeletingUser === user.id}>
                 {isDeletingUser === user.id ? 'Удаление...' : '✕'}
               </button>
@@ -376,13 +180,7 @@ function App() {
         <main className="main-content" ref={calendarRef}>
           <Calendar
             year={currentYear}
-            users={users}
-            vacations={vacations}
-            selectedUserId={selectedUserId}
-            onDaySelect={handleDaySelect}
-            externalSelectionStart={selectionStart}
-            onVacationSelect={handleVacationSelect}
-            selectedVacationForDelete={selectedVacationForDelete}
+            onVacationSelect={selectVacation}
           />
         </main>
       </div>
