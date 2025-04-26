@@ -16,8 +16,7 @@ function App() {
   const [isAddingUser, setIsAddingUser] = useState<boolean>(false)
   const [newUserName, setNewUserName] = useState<string>('')
   const [isResetting, setIsResetting] = useState<boolean>(false);
-  // Добавляем состояния загрузки для всех асинхронных действий
-  const [isDeletingUser, setIsDeletingUser] = useState<string | null>(null); // ID удаляемого пользователя
+  const [isDeletingUser, setIsDeletingUser] = useState<string | null>(null);
   const [isAddingUserLoading, setIsAddingUserLoading] = useState<boolean>(false);
   const [selectedVacationForDelete, setSelectedVacationForDelete] = useState<{ vacation: VacationPeriod; user: User } | null>(null);
   const currentYear = getCurrentYear()
@@ -26,18 +25,14 @@ function App() {
   const userChipsRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
 
-  // Загрузка данных при первом рендере
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Загружаем пользователей и отпуска из Firebase
         const loadedUsers = await getUsers()
         const loadedVacations = await getVacations()
 
-        // Предзагружаем данные о праздниках для текущего года
         await preloadHolidaysForYear(currentYear);
 
-        // Устанавливаем загруженные данные в состояние
         setUsers(loadedUsers)
         setVacations(loadedVacations)
       } catch (error: unknown) {
@@ -48,10 +43,8 @@ function App() {
     loadData()
   }, [])
 
-  // Обработчик для отмены выбора сотрудника и выбранного отпуска при клике вне календаря и чипсов
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
-      // Проверяем клик вне календаря, чипсов и контейнера с кнопками
       if (calendarRef.current && userChipsRef.current) {
         const isClickInsideCalendar = calendarRef.current.contains(event.target as Node);
         const isClickInsideUserChips = userChipsRef.current.contains(event.target as Node);
@@ -59,13 +52,11 @@ function App() {
         const isClickInsideButtons = buttonsContainerRef && buttonsContainerRef.contains(event.target as Node);
 
         if (!isClickInsideCalendar && !isClickInsideUserChips && !isClickInsideButtons) {
-          // Отменяем выбор пользователя
           if (selectedUserId) {
             setSelectedUserId(null);
             setSelectionStart(null);
           }
 
-          // Отменяем выбор отпуска для удаления
           if (selectedVacationForDelete) {
             setSelectedVacationForDelete(null);
           }
@@ -73,10 +64,8 @@ function App() {
       }
     }
 
-    // Добавляем слушатель событий
     document.addEventListener('mousedown', handleOutsideClick);
 
-    // Удаляем слушатель при размонтировании компонента
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
@@ -91,7 +80,6 @@ function App() {
     if (newUserName.trim()) {
       try {
         setIsAddingUserLoading(true);
-        // Генерируем уникальный цвет для нового пользователя
         const existingColors = users.map(user => user.color);
         const newColor = generateUniqueColor(existingColors);
 
@@ -119,7 +107,6 @@ function App() {
 
     try {
       setIsDeletingUser(userId);
-      // Обновляем UI сразу для более быстрого отклика
       setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
       setVacations(prevVacations => prevVacations.filter(vacation => vacation.userId !== userId));
 
@@ -128,21 +115,18 @@ function App() {
         setSelectionStart(null);
       }
 
-      // Выполняем удаление в фоновом режиме
-      // Оба запроса выполняются параллельно для ускорения
       await Promise.all([
         deleteUserVacations(userId),
         deleteUser(userId)
       ]);
     } catch (error: unknown) {
-      // В случае ошибки перезагружаем данные, чтобы состояние было актуальным
       try {
         const loadedUsers = await getUsers();
         const loadedVacations = await getVacations();
         setUsers(loadedUsers);
         setVacations(loadedVacations);
+      // eslint-disable-next-line no-empty
       } catch {
-        // В случае ошибки при перезагрузке просто показываем сообщение
       }
       alert('Ошибка при удалении пользователя.');
     } finally {
@@ -153,7 +137,6 @@ function App() {
   const handleDaySelect = async (date: Date | null) => {
     if (!selectedUserId) return
 
-    // Если передан null (отмена выбора), сбрасываем состояние выбора
     if (date === null) {
       setSelectionStart(null)
       return
@@ -165,21 +148,17 @@ function App() {
     }
 
     try {
-      // Нормализуем даты, устанавливая время на начало дня
       const normalizedSelectionStart = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate());
       const normalizedEndDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-      // Создаем новый период отпуска
       const newVacation: Omit<VacationPeriod, 'id'> = {
         userId: selectedUserId,
         startDate: new Date(Math.min(normalizedSelectionStart.getTime(), normalizedEndDate.getTime())),
         endDate: new Date(Math.max(normalizedSelectionStart.getTime(), normalizedEndDate.getTime()))
       }
 
-      // Добавляем отпуск в Firebase и получаем объект с ID
       const savedVacation = await addVacation(newVacation)
 
-      // Обновляем состояние
       setVacations([...vacations, savedVacation])
       setSelectionStart(null)
     } catch (error: unknown) {
@@ -187,30 +166,24 @@ function App() {
     }
   }
 
-  // Обработчик выбора отпуска для удаления
   const handleVacationSelect = (vacation: VacationPeriod | null, user: User | null) => {
-    // Если передан null, значит нужно сбросить выбор
     if (!vacation || !user) {
       setSelectedVacationForDelete(null);
       return;
     }
 
-    // Если пользователь выбран, значит мы в режиме добавления отпуска, а не удаления
     if (selectedUserId) {
       return;
     }
 
-    // Устанавливаем выбранный отпуск для удаления
     setSelectedVacationForDelete({ vacation, user });
 
-    // Сбрасываем выбор пользователя, если он вдруг был установлен
     if (selectedUserId) {
       setSelectedUserId(null);
       setSelectionStart(null);
     }
   };
 
-  // Функция для очистки базы данных
   const handleResetDatabase = async () => {
     if (!confirm('Вы действительно хотите удалить ВСЕ данные (пользователей и отпуска)?')) {
       return;
@@ -220,7 +193,6 @@ function App() {
       setIsResetting(true);
       await resetDatabase();
 
-      // Обновляем состояние
       setUsers([]);
       setVacations([]);
       setSelectedUserId(null);
@@ -242,37 +214,63 @@ function App() {
     }
   };
 
-  // Добавляем функцию для сброса выбора начальной даты
   const handleCancelSelection = () => {
     setSelectionStart(null);
   };
 
-  // Функция для обработки удаления отпуска
   const handleVacationDelete = async () => {
     if (!selectedVacationForDelete) return;
 
     try {
-      // Оптимистическое обновление UI
       setVacations(prevVacations =>
         prevVacations.filter(v => v.id !== selectedVacationForDelete.vacation.id)
       );
 
-      // Выполняем запрос на удаление
       await deleteVacation(selectedVacationForDelete.vacation.id);
 
-      // Сбрасываем выбранный отпуск
       setSelectedVacationForDelete(null);
     } catch (error) {
       console.error('Ошибка при удалении отпуска:', error);
 
-      // В случае ошибки восстанавливаем данные
       try {
         const loadedVacations = await getVacations();
         setVacations(loadedVacations);
+      // eslint-disable-next-line no-empty
       } catch {
-        // Если не удалось загрузить данные, просто показываем ошибку
       }
       alert('Произошла ошибка при удалении отпуска');
+    }
+  };
+
+  const handleDeleteAllUserVacations = async () => {
+    if (!selectedUserId) return;
+
+    const user = users.find(u => u.id === selectedUserId);
+    if (!user) return;
+
+    if (!confirm(`Вы действительно хотите удалить ВСЕ отпуска сотрудника ${user.name}?`)) {
+      return;
+    }
+
+    try {
+      setVacations(prevVacations =>
+        prevVacations.filter(vacation => vacation.userId !== selectedUserId)
+      );
+
+      await deleteUserVacations(selectedUserId);
+
+      setSelectedUserId(null);
+      setSelectionStart(null);
+    } catch (error) {
+      console.error('Ошибка при удалении отпусков пользователя:', error);
+
+      try {
+        const loadedVacations = await getVacations();
+        setVacations(loadedVacations);
+        // eslint-disable-next-line no-empty
+      } catch {
+      }
+      alert('Произошла ошибка при удалении отпусков');
     }
   };
 
@@ -297,6 +295,15 @@ function App() {
                   onClick={handleCancelSelection}
                 >
                   Отменить выбор даты ({formatDate(selectionStart)})
+                </button>
+              )}
+
+              {selectedUserId && !selectionStart && (
+                <button
+                  className="delete-all-vacations-button"
+                  onClick={handleDeleteAllUserVacations}
+                >
+                  Удалить все отпуска {users.find(u => u.id === selectedUserId)?.name}
                 </button>
               )}
 

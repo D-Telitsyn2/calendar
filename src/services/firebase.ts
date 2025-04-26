@@ -2,9 +2,6 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-// Ваши настройки Firebase Web
-// Для начала работы вам нужно создать проект в Firebase (https://console.firebase.google.com/)
-// и заменить эти настройки на ваши
 const firebaseConfig = {
   apiKey: "AIzaSyAFp7j4ln7qj5fN_2Eivx-wmYyStEKtNEw",
   authDomain: "calendar-399d9.firebaseapp.com",
@@ -14,7 +11,6 @@ const firebaseConfig = {
   appId: "1:694414836511:web:07c2a28a999b08d9c1662a"
 };
 
-// Инициализация Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);

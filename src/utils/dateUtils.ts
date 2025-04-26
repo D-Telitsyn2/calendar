@@ -34,48 +34,43 @@ export const getCurrentYear = (): number => {
   return getYear(new Date());
 };
 
-// Функция для генерации уникального цвета, который будет отличаться от существующих
 export const generateUniqueColor = (existingColors: string[]): string => {
-  // Используем более светлые цвета с хорошим контрастом для черного текста
   const predefinedColors = [
-    '#aed6f1', // светло-голубой
-    '#fadbd8', // светло-розовый
-    '#d5f5e3', // светло-зеленый
-    '#fdebd0', // светло-оранжевый
-    '#ebdef0', // светло-фиолетовый
-    '#d0ece7', // светло-бирюзовый
-    '#f9e79f', // светло-желтый
-    '#f5cba7', // светло-коричневый
-    '#d6eaf8', // светло-синий
-    '#d2b4de', // лавандовый
-    '#fcf3cf', // светло-желтый
-    '#fadbd8', // светло-красный
-    '#e8daef', // светло-пурпурный
-    '#a9dfbf', // светло-зеленый
-    '#a3e4d7', // мятный
-    '#f7dc6f', // горчичный
-    '#f5b7b1', // персиковый
-    '#d7bde2', // светло-сиреневый
-    '#a9cce3', // нежно-голубой
-    '#fad7a0', // светло-оранжевый
+    '#aed6f1',
+    '#fadbd8',
+    '#d5f5e3',
+    '#fdebd0',
+    '#ebdef0',
+    '#d0ece7',
+    '#f9e79f',
+    '#f5cba7',
+    '#d6eaf8',
+    '#d2b4de',
+    '#fcf3cf',
+    '#fadbd8',
+    '#e8daef',
+    '#a9dfbf',
+    '#a3e4d7',
+    '#f7dc6f',
+    '#f5b7b1',
+    '#d7bde2',
+    '#a9cce3',
+    '#fad7a0',
   ];
 
-  // Сначала пробуем использовать цвета из предопределенного набора
   for (const color of predefinedColors) {
     if (!existingColors.includes(color)) {
       return color;
     }
   }
 
-  // Если все предопределенные цвета уже используются, генерируем случайный светлый цвет
   let newColor;
   let attempts = 0;
 
   do {
-    // Создаем случайный светлый цвет (высокие значения RGB для светлых тонов)
-    const r = Math.floor(Math.random() * 55 + 200).toString(16).padStart(2, '0'); // 200-255
-    const g = Math.floor(Math.random() * 55 + 200).toString(16).padStart(2, '0'); // 200-255
-    const b = Math.floor(Math.random() * 55 + 200).toString(16).padStart(2, '0'); // 200-255
+    const r = Math.floor(Math.random() * 55 + 200).toString(16).padStart(2, '0');
+    const g = Math.floor(Math.random() * 55 + 200).toString(16).padStart(2, '0');
+    const b = Math.floor(Math.random() * 55 + 200).toString(16).padStart(2, '0');
     newColor = `#${r}${g}${b}`;
     attempts++;
   } while (existingColors.includes(newColor) && attempts < 50);

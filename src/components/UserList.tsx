@@ -22,7 +22,6 @@ const UserList: React.FC<UserListProps> = ({
 
   const handleAddUser = () => {
     if (newUserName.trim()) {
-      // Генерируем уникальный цвет для нового пользователя
       const existingColors = users.map(user => user.color);
       const newColor = generateUniqueColor(existingColors);
 

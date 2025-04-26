@@ -4,14 +4,12 @@ import { VacationPeriod } from '../types';
 
 const VACATIONS_COLLECTION = 'vacations';
 
-// Определяем типы для данных в Firestore
 interface FirebaseVacationData {
   userId: string;
   startDate: Timestamp;
   endDate: Timestamp;
 }
 
-// Преобразование между типами Date и Timestamp для Firebase
 const toFirebaseVacation = (vacation: Omit<VacationPeriod, 'id'>): FirebaseVacationData => {
   return {
     userId: vacation.userId,
@@ -29,20 +27,17 @@ const fromFirebaseVacation = (id: string, data: FirebaseVacationData): VacationP
   };
 };
 
-// Получение всех отпусков
 export const getVacations = async (): Promise<VacationPeriod[]> => {
   const querySnapshot = await getDocs(collection(db, VACATIONS_COLLECTION));
   return querySnapshot.docs.map(doc => fromFirebaseVacation(doc.id, doc.data() as FirebaseVacationData));
 };
 
-// Получение отпусков пользователя
 export const getUserVacations = async (userId: string): Promise<VacationPeriod[]> => {
   const q = query(collection(db, VACATIONS_COLLECTION), where("userId", "==", userId));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => fromFirebaseVacation(doc.id, doc.data() as FirebaseVacationData));
 };
 
-// Добавление нового отпуска
 export const addVacation = async (vacation: Omit<VacationPeriod, 'id'>): Promise<VacationPeriod> => {
   const firebaseVacation = toFirebaseVacation(vacation);
   const docRef = await addDoc(collection(db, VACATIONS_COLLECTION), firebaseVacation);
@@ -52,7 +47,6 @@ export const addVacation = async (vacation: Omit<VacationPeriod, 'id'>): Promise
   };
 };
 
-// Обновление периода отпуска
 export const updateVacation = async (id: string, vacationData: Partial<Omit<VacationPeriod, 'id'>>): Promise<void> => {
   const vacationRef = doc(db, VACATIONS_COLLECTION, id);
   const updates: Record<string, Timestamp | string> = {};
@@ -72,19 +66,16 @@ export const updateVacation = async (id: string, vacationData: Partial<Omit<Vaca
   await updateDoc(vacationRef, updates);
 };
 
-// Удаление отпуска
 export const deleteVacation = async (id: string): Promise<void> => {
   const vacationRef = doc(db, VACATIONS_COLLECTION, id);
   await deleteDoc(vacationRef);
 };
 
-// Удаление всех отпусков пользователя
 export const deleteUserVacations = async (userId: string): Promise<void> => {
   const vacationsCollection = collection(db, VACATIONS_COLLECTION);
   const q = query(vacationsCollection, where("userId", "==", userId));
   const querySnapshot = await getDocs(q);
 
-  // Используем Promise.all для параллельного удаления
   await Promise.all(
     querySnapshot.docs.map(document =>
       deleteDoc(doc(db, VACATIONS_COLLECTION, document.id))
