@@ -30,4 +30,4 @@ jobs:
     - name: Deploy to Firebase
       run: npm run deploy
       env:
-        FIREBASE_TOKEN: ${{1//09cf_gD8ckwQGCgYIARAAGAkSNwF-L9Irav5P7xsMvErtDi7pkcz0CW9bOt1iLa8JsK4NlpOWKWvE9hXeToTazFW3nrQa0ZoA9PA}}
+        FIREBASE_TOKEN: ${{secrets.FIREBASE_TOKEN}}
