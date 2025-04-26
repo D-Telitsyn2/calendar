@@ -9,6 +9,7 @@ import {
   TextField,
   List,
   ListItem,
+  ListItemButton,
   IconButton,
   Divider,
   Paper,
@@ -104,9 +105,7 @@ const UserList: React.FC<UserListProps> = ({
         {users.map((user, index) => (
           <React.Fragment key={user.id}>
             <ListItem
-              button
-              selected={selectedUserId === user.id}
-              onClick={() => onUserSelect(user.id)}
+              disablePadding
               secondaryAction={
                 <IconButton
                   edge="end"
@@ -122,16 +121,22 @@ const UserList: React.FC<UserListProps> = ({
               }
               sx={{ borderRadius: 1 }}
             >
-              <Box
-                sx={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  bgcolor: user.color,
-                  mr: 1.5
-                }}
-              />
-              <Typography>{user.name}</Typography>
+              <ListItemButton
+                selected={selectedUserId === user.id}
+                onClick={() => onUserSelect(user.id)}
+                sx={{ borderRadius: 1 }}
+              >
+                <Box
+                  sx={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    bgcolor: user.color,
+                    mr: 1.5
+                  }}
+                />
+                <Typography>{user.name}</Typography>
+              </ListItemButton>
             </ListItem>
             {index < users.length - 1 && <Divider />}
           </React.Fragment>
