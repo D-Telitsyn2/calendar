@@ -74,7 +74,9 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
 
   const handleDelete = () => {
     if (employee) {
-      onDelete(employee.id);
+      if (window.confirm(`Вы действительно хотите удалить сотрудника "${employee.name}"?`)) {
+        onDelete(employee.id);
+      }
     }
     onClose();
   };

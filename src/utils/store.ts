@@ -225,6 +225,11 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     const currentUser = getCurrentUser();
     if (!currentUser || !selectedVacationForDelete) return;
 
+    // Add confirmation dialog
+    if (!confirm(`Вы действительно хотите удалить отпуск сотрудника "${selectedVacationForDelete.employee.name}"?`)) {
+      return;
+    }
+
     try {
       await deleteVacation(selectedVacationForDelete.vacation.id);
 
