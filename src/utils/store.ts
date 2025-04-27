@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getCurrentYear, generateUniqueColor } from './dateUtils';
-import { getEmployees, addEmployee, deleteEmployee, deleteAllEmployees } from '../services/employeeService';
+import { getEmployees, addEmployee, deleteEmployee, deleteAllEmployees, updateEmployee } from '../services/employeeService';
 import { getVacations, addVacation, deleteVacation, deleteEmployeeVacations, deleteAllAccountVacations } from '../services/vacationService';
 import { preloadHolidaysForYear } from './holidayUtils';
 import { Employee, VacationPeriod } from '../types';
@@ -21,6 +21,7 @@ interface CalendarState {
     vacation: VacationPeriod;
     employee: Employee
   } | null;
+  isUpdatingEmployee: boolean;
   loadData: () => Promise<void>;
   selectEmployee: (employeeId: string) => void;
   addNewEmployee: () => Promise<void>;
@@ -34,6 +35,8 @@ interface CalendarState {
   deleteVacation: () => Promise<void>;
   deleteAllEmployeeVacations: () => Promise<void>;
   resetDatabaseData: () => Promise<void>;
+  updateEmployeeColor: (employeeId: string, color: string) => Promise<void>;
+  updateEmployeeName: (employeeId: string, name: string) => Promise<void>;
 }
 
 export const useCalendarStore = create<CalendarState>((set, get) => ({
@@ -48,6 +51,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   isDeletingEmployee: null,
   isAddingEmployeeLoading: false,
   selectedVacationForDelete: null,
+  isUpdatingEmployee: false,
 
   loadData: async () => {
     try {
@@ -285,6 +289,47 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       alert('Произошла ошибка при очистке базы данных.');
     } finally {
       set({ isResetting: false });
+    }
+  },
+
+  // Новые функции для обновления данных сотрудника
+  updateEmployeeColor: async (employeeId: string, color: string) => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
+    try {
+      set({ isUpdatingEmployee: true });
+      await updateEmployee(employeeId, { color });
+
+      set(state => ({
+        employees: state.employees.map(emp =>
+          emp.id === employeeId ? { ...emp, color } : emp
+        ),
+        isUpdatingEmployee: false
+      }));
+    } catch (error) {
+      console.error('Ошибка при обновлении цвета сотрудника:', error);
+      set({ isUpdatingEmployee: false });
+    }
+  },
+
+  updateEmployeeName: async (employeeId: string, name: string) => {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !name.trim()) return;
+
+    try {
+      set({ isUpdatingEmployee: true });
+      await updateEmployee(employeeId, { name: name.trim() });
+
+      set(state => ({
+        employees: state.employees.map(emp =>
+          emp.id === employeeId ? { ...emp, name: name.trim() } : emp
+        ),
+        isUpdatingEmployee: false
+      }));
+    } catch (error) {
+      console.error('Ошибка при обновлении имени сотрудника:', error);
+      set({ isUpdatingEmployee: false });
     }
   }
 }));

@@ -3,11 +3,12 @@ import './App.css'
 import Calendar from './components/Calendar'
 import Loader from './components/Loader'
 import { Auth } from './components/Auth'
+import EmployeeContextMenu from './components/EmployeeContextMenu'
 import { useCalendarStore } from './utils/store'
 import { getCurrentYear, formatDate } from './utils/dateUtils'
 import { onUserChanged, logout } from './services/authService';
 import type { User as FirebaseUser } from 'firebase/auth';
-// Импорт компонентов Material UI
+
 import {
   Typography,
   Button,
@@ -22,7 +23,6 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Close as CloseIcon,
   Cancel as CancelIcon,
   DeleteForever as DeleteForeverIcon,
   Logout as LogoutIcon
@@ -31,6 +31,11 @@ import {
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    employeeId: string;
+  } | null>(null);
 
   const {
     employees,
@@ -39,7 +44,6 @@ function App() {
     selectionStart,
     isAddingEmployee,
     newEmployeeName,
-    isDeletingEmployee,
     isAddingEmployeeLoading,
     selectedVacationForDelete,
 
@@ -53,7 +57,9 @@ function App() {
     cancelSelection,
     selectVacation,
     deleteVacation,
-    deleteAllEmployeeVacations
+    deleteAllEmployeeVacations,
+    updateEmployeeColor,
+    updateEmployeeName
   } = useCalendarStore();
 
   const currentYear = getCurrentYear();
@@ -117,6 +123,21 @@ function App() {
       addNewEmployee();
     }
   };
+
+  const handleContextMenu = (event: React.MouseEvent, employeeId: string) => {
+    event.preventDefault();
+    setContextMenu({
+      mouseX: event.clientX,
+      mouseY: event.clientY,
+      employeeId
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const selectedEmployee = employees.find(emp => emp.id === contextMenu?.employeeId) || null;
 
   if (authChecking) {
     return <Loader />;
@@ -322,30 +343,16 @@ function App() {
       </AppBar>
 
       <Container maxWidth={false} sx={{ my: 'auto'}}>
-        <Box ref={employeeChipsRef} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+        <Box ref={employeeChipsRef} sx={{ display: 'flex', flexWrap: 'wrap', width: 'fit-content', gap: 1, mb: 2 }}>
           {employees.map((employee) => (
             <Chip
               key={employee.id}
               label={employee.name}
               onClick={() => selectEmployee(employee.id)}
-              onDelete={(e) => {
-                e.stopPropagation();
-                deleteEmployeeById(employee.id);
-              }}
-              deleteIcon={
-                isDeletingEmployee === employee.id ?
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24 }}>
-                  <Box sx={{ width: 16, height: 16 }} className="mini-spinner" />
-                </Box> :
-                <CloseIcon />
-              }
               avatar={<Avatar sx={{ bgcolor: employee.color }}></Avatar>}
               variant="outlined"
               color={selectedEmployeeId === employee.id ? "primary" : "default"}
-              sx={{
-                fontWeight: selectedEmployeeId === employee.id ? 'bold' : 'normal',
-                borderWidth: selectedEmployeeId === employee.id ? 2 : 1,
-              }}
+              onContextMenu={(event) => handleContextMenu(event, employee.id)}
             />
           ))}
         </Box>
@@ -356,6 +363,20 @@ function App() {
             onVacationSelect={selectVacation}
           />
         </Box>
+
+        <EmployeeContextMenu
+          open={contextMenu !== null}
+          anchorPosition={contextMenu !== null ? { top: contextMenu?.mouseY || 0, left: contextMenu?.mouseX || 0 } : null}
+          employee={selectedEmployee}
+          onClose={handleCloseContextMenu}
+          onDelete={deleteEmployeeById}
+          onDeleteVacations={(employeeId) => {
+            selectEmployee(employeeId);
+            deleteAllEmployeeVacations();
+          }}
+          onChangeColor={updateEmployeeColor}
+          onRename={updateEmployeeName}
+        />
       </Container>
     </Box>
   )
