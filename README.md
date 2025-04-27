@@ -1,54 +1,71 @@
-# React + TypeScript + Vite
+# Calendar Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web-based calendar application for managing employee vacation schedules and viewing holidays.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Employee vacation scheduling and management
+- Holiday tracking
+- User authentication
+- Responsive design
 
-## Expanding the ESLint configuration
+## Technology Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React
+- TypeScript
+- Vite
+- Firebase (Authentication & Firestore)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## Getting Started
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Prerequisites
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Node.js (v16 or higher)
+- npm or yarn
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+### Installation
+
+1. Clone the repository
+   ```
+   git clone https://github.com/your-username/calendar.git
+   cd calendar
+   ```
+
+2. Install dependencies
+   ```
+   npm install
+   ```
+
+3. Set up Firebase configuration
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Enable Authentication and Firestore
+   - Add your Firebase configuration to `src/services/firebase.ts`
+
+4. Start the development server
+   ```
+   npm run dev
+   ```
+
+## Usage
+
+After starting the development server, open your browser and navigate to http://localhost:5173 (or the port specified in your terminal).
+
+### Authentication
+
+- Register a new account or log in with existing credentials
+- The app uses Firebase Authentication for user management
+
+### Managing Vacation Schedules
+
+- Add, edit, or delete vacation entries for employees
+- View vacation schedules in the calendar view
+
+## Project Structure
+
+- `src/components` - React components
+- `src/services` - Firebase and other service integrations
+- `src/utils` - Utility functions for dates, holidays, etc.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
