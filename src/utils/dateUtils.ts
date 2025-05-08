@@ -1,4 +1,4 @@
-import { format, isWithinInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, eachMonthOfInterval, eachDayOfInterval, getYear } from 'date-fns';
+import { format, isWithinInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, eachMonthOfInterval, eachDayOfInterval, getYear, differenceInDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 export const formatDate = (date: Date): string => {
@@ -32,6 +32,12 @@ export const generateCalendarForYear = (year: number): Date[][] => {
 
 export const getCurrentYear = (): number => {
   return getYear(new Date());
+};
+
+// Calculate number of days between two dates (inclusive)
+export const getDaysCount = (startDate: Date, endDate: Date): number => {
+  // Add 1 to include both start and end dates in count
+  return differenceInDays(endDate, startDate) + 1;
 };
 
 export const generateUniqueColor = (existingColors: string[]): string => {
