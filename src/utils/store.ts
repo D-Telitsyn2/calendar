@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getCurrentYear, generateUniqueColor } from './dateUtils';
+import { getCurrentYear, generateUniqueColor, formatDate, getDaysCount } from './dateUtils';
 import { getEmployees, addEmployee, deleteEmployee, deleteAllEmployees, updateEmployee } from '../services/employeeService';
 import { getVacations, addVacation, deleteVacation, deleteEmployeeVacations, deleteAllAccountVacations } from '../services/vacationService';
 import { preloadHolidaysForYear } from './holidayUtils';
@@ -38,6 +38,14 @@ interface CalendarState {
   updateEmployeeColor: (employeeId: string, color: string) => Promise<void>;
   updateEmployeeName: (employeeId: string, name: string) => Promise<void>;
 }
+
+// Функция для подсчета общего количества дней отпусков сотрудника
+const getEmployeeVacationDaysCount = (vacations: VacationPeriod[], employeeId: string): number => {
+  const employeeVacations = vacations.filter(v => v.employeeId === employeeId);
+  return employeeVacations.reduce((total, vacation) => {
+    return total + getDaysCount(vacation.startDate, vacation.endDate);
+  }, 0);
+};
 
 export const useCalendarStore = create<CalendarState>((set, get) => ({
   employees: [],
@@ -225,8 +233,12 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     const currentUser = getCurrentUser();
     if (!currentUser || !selectedVacationForDelete) return;
 
-    // Add confirmation dialog
-    if (!confirm(`Вы действительно хотите удалить отпуск сотрудника "${selectedVacationForDelete.employee.name}"?`)) {
+    const startDate = formatDate(selectedVacationForDelete.vacation.startDate);
+    const endDate = formatDate(selectedVacationForDelete.vacation.endDate);
+    const daysCount = getDaysCount(selectedVacationForDelete.vacation.startDate, selectedVacationForDelete.vacation.endDate);
+
+    // Add confirmation dialog with detailed vacation info
+    if (!confirm(`Вы действительно хотите удалить отпуск (С ${startDate} По ${endDate}, ${daysCount} дн.) сотрудника "${selectedVacationForDelete.employee.name}"?`)) {
       return;
     }
 
@@ -244,11 +256,17 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   },
 
   deleteAllEmployeeVacations: async () => {
-    const { selectedEmployeeId } = get();
+    const { selectedEmployeeId, employees, vacations } = get();
     const currentUser = getCurrentUser();
     if (!currentUser || !selectedEmployeeId) return;
 
-    if (!confirm('Вы действительно хотите удалить ВСЕ отпуска этого сотрудника?')) {
+    const employee = employees.find(emp => emp.id === selectedEmployeeId);
+    if (!employee) return;
+
+    // Считаем общее количество дней отпуска
+    const totalVacationDays = getEmployeeVacationDaysCount(vacations, selectedEmployeeId);
+
+    if (!confirm(`Вы действительно хотите удалить ВСЕ отпуска (${totalVacationDays} дн.) сотрудника "${employee.name}"?`)) {
       return;
     }
 

@@ -3,6 +3,8 @@ import { Menu, MenuItem, ListItemIcon, ListItemText, Dialog, DialogTitle, Dialog
 import { Edit, Delete, FormatColorFill, EventBusy } from '@mui/icons-material';
 import { ChromePicker, ColorResult } from 'react-color';
 import { Employee } from '../types';
+import { useCalendarStore } from '../utils/store';
+import { getDaysCount } from '../utils/dateUtils';
 
 interface EmployeeContextMenuProps {
   open: boolean;
@@ -25,10 +27,17 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
   onChangeColor,
   onRename
 }) => {
+  const { vacations } = useCalendarStore();
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
+
+  // Получаем количество дней отпусков для данного сотрудника
+  const employeeVacationDays = employee
+    ? vacations.filter(v => v.employeeId === employee.id)
+              .reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
+    : 0;
 
   const handleColorPickerOpen = () => {
     if (employee) {
@@ -120,7 +129,7 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
           <ListItemIcon>
             <EventBusy fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Удалить отпуска" />
+          <ListItemText primary={`Удалить отпуска${employeeVacationDays ? ` (${employeeVacationDays} дн.)` : ''}`} />
         </MenuItem>
       </Menu>
 

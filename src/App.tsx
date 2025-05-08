@@ -5,7 +5,7 @@ import Loader from './components/Loader'
 import { Auth } from './components/Auth'
 import EmployeeContextMenu from './components/EmployeeContextMenu'
 import { useCalendarStore } from './utils/store'
-import { getCurrentYear, formatDate } from './utils/dateUtils'
+import { getCurrentYear, formatDate, getDaysCount } from './utils/dateUtils'
 import { onUserChanged, logout } from './services/authService';
 import type { User as FirebaseUser } from 'firebase/auth';
 
@@ -46,6 +46,7 @@ function App() {
     newEmployeeName,
     isAddingEmployeeLoading,
     selectedVacationForDelete,
+    vacations,
 
     loadData,
     selectEmployee,
@@ -61,6 +62,14 @@ function App() {
     updateEmployeeColor,
     updateEmployeeName
   } = useCalendarStore();
+
+  // Function to count total vacation days for an employee
+  const getEmployeeVacationDaysCount = (employeeId: string): number => {
+    const employeeVacations = vacations.filter(v => v.employeeId === employeeId);
+    return employeeVacations.reduce((total, vacation) => {
+      return total + getDaysCount(vacation.startDate, vacation.endDate);
+    }, 0);
+  };
 
   const currentYear = getCurrentYear();
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -150,6 +159,16 @@ function App() {
   if (isLoading) {
     return <Loader />;
   }
+
+  // Calculate vacation days for the selected vacation
+  const selectedVacationDays = selectedVacationForDelete
+    ? getDaysCount(selectedVacationForDelete.vacation.startDate, selectedVacationForDelete.vacation.endDate)
+    : 0;
+
+  // Calculate vacation days for the selected employee
+  const selectedEmployeeVacationDays = selectedEmployeeId
+    ? getEmployeeVacationDaysCount(selectedEmployeeId)
+    : 0;
 
   return (
     <Box className="app">
@@ -253,7 +272,7 @@ function App() {
                       size="small"
                       fullWidth={window.innerWidth < 600}
                     >
-                      Удалить отпуска
+                      Удалить отпуска ({selectedEmployeeVacationDays} дн.)
                     </Button>
                   )}
 
@@ -266,7 +285,7 @@ function App() {
                       size="small"
                       fullWidth={window.innerWidth < 600}
                     >
-                      Удалить
+                      Удалить ({selectedVacationDays} дн.)
                     </Button>
                   )}
                 </>
