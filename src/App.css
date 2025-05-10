@@ -534,14 +534,15 @@ h1 {
   background-color: #c0392b;
 }
 
-/* Добавляем стили для более четкого отображения занятых дней, которые выбраны */
-.calendar-day.vacation.start-date,
-.calendar-day.vacation.preview-range {
+/* Добавляем стили для более четкого отображения всех дней, которые выбраны */
+.calendar-day.start-date,
+.calendar-day.preview-range {
   position: relative;
 }
 
-.calendar-day.vacation.start-date::after,
-.calendar-day.vacation.preview-range::after {
+/* Для всех ячеек в диапазоне предпросмотра */
+.calendar-day.start-date::after,
+.calendar-day.preview-range::after {
   content: '';
   position: absolute;
   top: 0;
