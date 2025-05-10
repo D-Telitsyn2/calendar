@@ -30,10 +30,12 @@ const Calendar: React.FC<CalendarProps> = ({
 
   const selectedEmployee = selectedEmployeeId ? employees.find(employee => employee.id === selectedEmployeeId) : null;
 
+  // Синхронизация локального состояния выбора с глобальным состоянием
   useEffect(() => {
     setSelectionStart(externalSelectionStart);
   }, [externalSelectionStart]);
 
+  // Синхронизация выбранного отпуска с глобальным состоянием
   useEffect(() => {
     if (selectedVacationForDelete) {
       setSelectedVacation(selectedVacationForDelete.vacation);
@@ -42,12 +44,14 @@ const Calendar: React.FC<CalendarProps> = ({
     }
   }, [selectedVacationForDelete]);
 
+  // Сбрасываем дату наведения, когда сбрасывается начальная дата выбора
   useEffect(() => {
     if (!selectionStart) {
       setHoverDate(null);
     }
   }, [selectionStart]);
 
+  // Сбрасываем выбранный отпуск при выборе сотрудника
   useEffect(() => {
     if (selectedEmployeeId) {
       setSelectedVacation(null);
@@ -59,26 +63,33 @@ const Calendar: React.FC<CalendarProps> = ({
       return;
     }
 
+    // Получаем отпуска для выбранной даты
+    const vacationsForDate = getVacationsForDate(date);
+
     if (selectedEmployeeId) {
-      const vacationsForDate = getVacationsForDate(date);
+      // Проверяем, есть ли уже отпуск этого сотрудника на эту дату
       const employeeHasVacationOnDate = vacationsForDate.some(
         ({ vacation }) => vacation.employeeId === selectedEmployeeId
       );
 
       if (employeeHasVacationOnDate) {
+        // Если у сотрудника уже есть отпуск на эту дату, ничего не делаем
         return;
       }
 
+      // Если нет начального выбора, устанавливаем его
       if (!selectionStart) {
         setSelectionStart(date);
+        onDaySelect(date);
       } else {
+        // Если начальный выбор уже есть, создаем отпуск
         setSelectionStart(null);
+        onDaySelect(date);
       }
-      onDaySelect(date);
       return;
     }
 
-    const vacationsForDate = getVacationsForDate(date);
+    // Снимаем выделение отпуска при клике на пустое место
     if (vacationsForDate.length === 0 && selectedVacation) {
       setSelectedVacation(null);
       if (onVacationSelect) {
@@ -87,17 +98,26 @@ const Calendar: React.FC<CalendarProps> = ({
     }
   };
 
-  const handleVacationSegmentClick = (vacation: VacationPeriod, employee: Employee) => {
+  const handleVacationSegmentClick = (vacation: VacationPeriod, employee: Employee, date: Date) => {
     if (selectedEmployeeId) {
+      // Проверяем, этот ли отпуск принадлежит выбранному сотруднику
+      if (vacation.employeeId === selectedEmployeeId) {
+        return; // Не позволяем создавать отпуск поверх существующего у того же сотрудника
+      }
+
+      // Здесь позволяем выбрать дату даже если на нее уже есть отпуск другого сотрудника
       if (!selectionStart) {
-        setSelectionStart(vacation.startDate);
+        setSelectionStart(date);
+        onDaySelect(date); // Передаем дату для первого выбора
       } else {
+        // Создаем отпуск при повторном клике
+        onDaySelect(date); // Передаем дату для завершения создания отпуска
         setSelectionStart(null);
       }
-      onDaySelect(vacation.startDate);
       return;
     }
 
+    // Если сотрудник не выбран - выбираем отпуск для просмотра/удаления
     setSelectedVacation(vacation);
     if (onVacationSelect) {
       onVacationSelect(vacation, employee);
@@ -105,13 +125,20 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   const handleMouseEnter = (date: Date) => {
-    if (selectionStart) {
+    // Устанавливаем дату наведения всегда, когда есть начальная дата выбора
+    // и выбран сотрудник (режим создания отпуска)
+    if (selectionStart && selectedEmployeeId) {
       setHoverDate(date);
+      // Дебаг
+      console.log('Hover date set:', date.toDateString());
     }
   };
 
   const handleMouseLeave = () => {
-    setHoverDate(null);
+    // Сбрасываем дату наведения при выходе курсора из ячейки
+    if (hoverDate) {
+      setHoverDate(null);
+    }
   };
 
   const getVacationsForDate = (date: Date): { vacation: VacationPeriod; employee: Employee | undefined }[] => {
@@ -128,12 +155,22 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   const isInPreviewRange = (date: Date): boolean => {
-    if (!selectedEmployeeId || !selectionStart || !hoverDate) return false;
+    // Проверяем необходимые условия для отображения предварительного диапазона
+    if (!selectedEmployeeId || !selectionStart || !hoverDate) {
+      return false;
+    }
 
-    const startTimestamp = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate()).getTime();
-    const hoverTimestamp = new Date(hoverDate.getFullYear(), hoverDate.getMonth(), hoverDate.getDate()).getTime();
-    const currentTimestamp = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    // Нормализуем временные метки дат (без времени) для корректного сравнения
+    const startTimestamp = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate()).setHours(0, 0, 0, 0);
+    const hoverTimestamp = new Date(hoverDate.getFullYear(), hoverDate.getMonth(), hoverDate.getDate()).setHours(0, 0, 0, 0);
+    const currentTimestamp = new Date(date.getFullYear(), date.getMonth(), date.getDate()).setHours(0, 0, 0, 0);
 
+    // Если эта дата совпадает с начальной датой выбора, не считаем ее частью диапазона
+    if (currentTimestamp === startTimestamp) {
+      return false;
+    }
+
+    // Проверяем, находится ли текущая дата в диапазоне между началом выбора и датой под курсором
     return (currentTimestamp >= Math.min(startTimestamp, hoverTimestamp) &&
             currentTimestamp <= Math.max(startTimestamp, hoverTimestamp));
   };
@@ -186,20 +223,38 @@ const Calendar: React.FC<CalendarProps> = ({
       classNames += ' today';
     }
 
+    // Добавляем классы для отображения выбора и предпросмотра при выборе сотрудника
     if (selectedEmployeeId) {
-      if (isStart) classNames += ' start-date';
-      else if (isPreviewRange) classNames += ' preview-range';
-
+      // Всегда добавляем курсор-указатель для всех ячеек при выбранном сотруднике
       classNames += ' pointer-cursor';
+
+      // Отмечаем начальную дату выбора
+      if (isStart) {
+        classNames += ' start-date';
+      }
+      // Отмечаем диапазон предпросмотра при наведении
+      else if (isPreviewRange) {
+        classNames += ' preview-range';
+      }
     }
 
     const cellStyle: React.CSSProperties = {};
-    if (selectedEmployee && isPreviewRange) {
-      cellStyle.backgroundColor = `${selectedEmployee.color}80`;
-    }
 
-    if (selectedEmployee && isStart) {
-      cellStyle.backgroundColor = `${selectedEmployee.color}B3`;
+    // Применяем стили для всех ячеек, если выбран сотрудник и есть дата начала выбора
+    if (selectedEmployee && selectionStart) {
+      // Применяем стили для диапазона предпросмотра при наведении
+      if (isPreviewRange) {
+        cellStyle.backgroundColor = `${selectedEmployee.color}80`; // 50% прозрачность
+        cellStyle.position = 'relative';
+        cellStyle.zIndex = 1; // Убедимся, что элемент находится над другими
+      }
+
+      // Применяем стили для начальной даты выбора
+      if (isStart) {
+        cellStyle.backgroundColor = `${selectedEmployee.color}B3`; // 70% прозрачность
+        cellStyle.position = 'relative';
+        cellStyle.zIndex = 2; // Начальная дата должна быть выше диапазона предпросмотра
+      }
     }
 
     return (
@@ -246,7 +301,7 @@ const Calendar: React.FC<CalendarProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (!isDisabled) {
-                        handleVacationSegmentClick(vacation, employee);
+                        handleVacationSegmentClick(vacation, employee, date);
                       }
                     }}
                   >
