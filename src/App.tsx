@@ -19,18 +19,22 @@ import {
   Chip,
   Avatar,
   Paper,
-  Container
+  Container,
+  IconButton
 } from '@mui/material';
 import {
   Add as AddIcon,
   Cancel as CancelIcon,
   DeleteForever as DeleteForeverIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
+  const [selectedYear, setSelectedYear] = useState<number>(getCurrentYear());
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
     mouseY: number;
@@ -71,10 +75,18 @@ function App() {
     }, 0);
   };
 
-  const currentYear = getCurrentYear();
   const calendarRef = useRef<HTMLDivElement>(null);
   const employeeChipsRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+
+  // Handle year navigation
+  const handlePreviousYear = () => {
+    setSelectedYear(prevYear => prevYear - 1);
+  };
+
+  const handleNextYear = () => {
+    setSelectedYear(prevYear => prevYear + 1);
+  };
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -92,6 +104,15 @@ function App() {
       loadData();
     }
   }, [user, loadData]);
+
+  // Preload holidays when selected year changes
+  useEffect(() => {
+    const loadHolidays = async () => {
+      const { preloadHolidaysForYear } = await import('./utils/holidayUtils');
+      await preloadHolidaysForYear(selectedYear);
+    };
+    loadHolidays();
+  }, [selectedYear]);
 
   // Обработчик клика вне области выбора
   useEffect(() => {
@@ -207,17 +228,38 @@ function App() {
             </Box>
 
             {/* Title */}
-            <Typography
-              variant="h5"
-              component="h1"
-              sx={{
-                fontWeight: 'bold',
-                fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                mt: { xs: 3, sm: 0 }
-              }}
-            >
-              Календарь отпусков {currentYear}
-            </Typography>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <IconButton
+                size="small"
+                onClick={handlePreviousYear}
+                aria-label="Previous year"
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <Typography
+                variant="h5"
+                component="h1"
+                sx={{
+                  fontWeight: 'bold',
+                  fontSize: { xs: '1.2rem', sm: '1.5rem' },
+                  mt: { xs: 3, sm: 0 }
+                }}
+              >
+                Календарь отпусков {selectedYear}
+              </Typography>
+              <IconButton
+                size="small"
+                onClick={handleNextYear}
+                aria-label="Next year"
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </Box>
           </Box>
 
           {/* Action buttons and user info - in the middle on desktop */}
@@ -378,7 +420,7 @@ function App() {
 
         <Box className="main-content" ref={calendarRef} sx={{ mt: 2, mb: 3 }}>
           <Calendar
-            year={currentYear}
+            year={selectedYear}
             onVacationSelect={selectVacation}
           />
         </Box>
