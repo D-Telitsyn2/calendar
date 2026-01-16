@@ -10,9 +10,10 @@ interface EmployeeContextMenuProps {
   open: boolean;
   anchorPosition: { top: number; left: number; } | null;
   employee: Employee | null;
+  year: number;
   onClose: () => void;
   onDelete: (employeeId: string) => void;
-  onDeleteVacations: (employeeId: string) => void;
+  onDeleteVacations: (employeeId: string, year: number) => void;
   onChangeColor: (employeeId: string, color: string) => Promise<void>;
   onRename: (employeeId: string, name: string) => Promise<void>;
 }
@@ -21,6 +22,7 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
   open,
   anchorPosition,
   employee,
+  year,
   onClose,
   onDelete,
   onDeleteVacations,
@@ -33,10 +35,14 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
   const [newName, setNewName] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
 
-  // Получаем количество дней отпусков для данного сотрудника
+  // Get vacation days count for the employee in the selected year
   const employeeVacationDays = employee
-    ? vacations.filter(v => v.employeeId === employee.id)
-              .reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
+    ? vacations.filter(v => {
+        if (v.employeeId !== employee.id) return false;
+        const startYear = v.startDate.getFullYear();
+        const endYear = v.endDate.getFullYear();
+        return startYear === year || endYear === year;
+      }).reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
     : 0;
 
   const handleColorPickerOpen = () => {
@@ -92,7 +98,7 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
 
   const handleDeleteVacations = () => {
     if (employee) {
-      onDeleteVacations(employee.id);
+      onDeleteVacations(employee.id, year);
     }
     onClose();
   };
@@ -129,7 +135,7 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
           <ListItemIcon>
             <EventBusy fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary={`Удалить отпуска${employeeVacationDays ? ` (${employeeVacationDays} дн.)` : ''}`} />
+          <ListItemText primary={`Удалить отпуска ${year}${employeeVacationDays ? ` (${employeeVacationDays} дн.)` : ''}`} />
         </MenuItem>
       </Menu>
 

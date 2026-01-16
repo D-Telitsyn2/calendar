@@ -100,6 +100,31 @@ export const deleteEmployeeVacations = async (employeeId: string, accountId: str
   );
 };
 
+export const deleteEmployeeVacationsInYear = async (employeeId: string, accountId: string, year: number): Promise<void> => {
+  const vacationsCollection = collection(db, 'vacations');
+  const q = query(
+    vacationsCollection,
+    where('employeeId', '==', employeeId),
+    where('accountId', '==', accountId)
+  );
+  const querySnapshot = await getDocs(q);
+
+  // Filter vacations by year and delete only those in the specified year
+  const vacationsInYear = querySnapshot.docs.filter(document => {
+    const data = document.data() as FirebaseVacationData;
+    const startDate = data.startDate.toDate();
+    const endDate = data.endDate.toDate();
+    // Delete if vacation starts or ends in the specified year
+    return startDate.getFullYear() === year || endDate.getFullYear() === year;
+  });
+
+  await Promise.all(
+    vacationsInYear.map(document =>
+      deleteDoc(doc(db, 'vacations', document.id))
+    )
+  );
+};
+
 export const deleteAllAccountVacations = async (accountId: string): Promise<void> => {
   const vacationsCollection = collection(db, 'vacations');
   const q = query(vacationsCollection, where('accountId', '==', accountId));
