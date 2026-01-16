@@ -4,6 +4,7 @@ import Calendar from './components/Calendar'
 import Loader from './components/Loader'
 import { Auth } from './components/Auth'
 import EmployeeContextMenu from './components/EmployeeContextMenu'
+import OnVacationWidget from './components/OnVacationWidget'
 import { useCalendarStore } from './utils/store'
 import { getCurrentYear, formatDate, getDaysCount, isVacationInYear } from './utils/dateUtils'
 import { onUserChanged, logout } from './services/authService';
@@ -412,11 +413,19 @@ function App() {
           ))}
         </Box>
 
-        <Box className="main-content" ref={calendarRef} sx={{ mt: 2, mb: 3 }}>
-          <Calendar
-            year={selectedYear}
-            onVacationSelect={selectVacation}
-          />
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start' }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box className="main-content" ref={calendarRef} sx={{ mt: 2, mb: 3 }}>
+              <Calendar
+                year={selectedYear}
+                onVacationSelect={selectVacation}
+              />
+            </Box>
+          </Box>
+          
+          <Box sx={{ width: { xs: '100%', md: 'auto' }, order: { xs: -1, md: 1 } }}>
+            <OnVacationWidget />
+          </Box>
         </Box>
 
         <EmployeeContextMenu
