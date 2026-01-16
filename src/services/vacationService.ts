@@ -1,6 +1,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, Timestamp, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { VacationPeriod } from '../types';
+import { isVacationInYear } from '../utils/dateUtils';
 
 // Отпуска хранятся в коллекции vacations, с документами, которые содержат информацию о userId
 
@@ -95,6 +96,30 @@ export const deleteEmployeeVacations = async (employeeId: string, accountId: str
 
   await Promise.all(
     querySnapshot.docs.map(document =>
+      deleteDoc(doc(db, 'vacations', document.id))
+    )
+  );
+};
+
+export const deleteEmployeeVacationsInYear = async (employeeId: string, accountId: string, year: number): Promise<void> => {
+  const vacationsCollection = collection(db, 'vacations');
+  const q = query(
+    vacationsCollection,
+    where('employeeId', '==', employeeId),
+    where('accountId', '==', accountId)
+  );
+  const querySnapshot = await getDocs(q);
+
+  // Filter vacations by year and delete only those in the specified year
+  const vacationsInYear = querySnapshot.docs.filter(document => {
+    const data = document.data() as FirebaseVacationData;
+    const startDate = data.startDate.toDate();
+    const endDate = data.endDate.toDate();
+    return isVacationInYear(startDate, endDate, year);
+  });
+
+  await Promise.all(
+    vacationsInYear.map(document =>
       deleteDoc(doc(db, 'vacations', document.id))
     )
   );

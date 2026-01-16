@@ -5,7 +5,7 @@ import Loader from './components/Loader'
 import { Auth } from './components/Auth'
 import EmployeeContextMenu from './components/EmployeeContextMenu'
 import { useCalendarStore } from './utils/store'
-import { getCurrentYear, formatDate, getDaysCount } from './utils/dateUtils'
+import { getCurrentYear, formatDate, getDaysCount, isVacationInYear } from './utils/dateUtils'
 import { onUserChanged, logout } from './services/authService';
 import type { User as FirebaseUser } from 'firebase/auth';
 
@@ -66,14 +66,6 @@ function App() {
     updateEmployeeColor,
     updateEmployeeName
   } = useCalendarStore();
-
-  // Function to count total vacation days for an employee
-  const getEmployeeVacationDaysCount = (employeeId: string): number => {
-    const employeeVacations = vacations.filter(v => v.employeeId === employeeId);
-    return employeeVacations.reduce((total, vacation) => {
-      return total + getDaysCount(vacation.startDate, vacation.endDate);
-    }, 0);
-  };
 
   const calendarRef = useRef<HTMLDivElement>(null);
   const employeeChipsRef = useRef<HTMLDivElement>(null);
@@ -186,9 +178,11 @@ function App() {
     ? getDaysCount(selectedVacationForDelete.vacation.startDate, selectedVacationForDelete.vacation.endDate)
     : 0;
 
-  // Calculate vacation days for the selected employee
+  // Calculate vacation days for the selected employee in the selected year
   const selectedEmployeeVacationDays = selectedEmployeeId
-    ? getEmployeeVacationDaysCount(selectedEmployeeId)
+    ? vacations.filter(v => 
+        v.employeeId === selectedEmployeeId && isVacationInYear(v.startDate, v.endDate, selectedYear)
+      ).reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
     : 0;
 
   return (
@@ -310,11 +304,11 @@ function App() {
                       variant="outlined"
                       color="error"
                       startIcon={<DeleteForeverIcon />}
-                      onClick={deleteAllEmployeeVacations}
+                      onClick={() => deleteAllEmployeeVacations(selectedYear)}
                       size="small"
                       fullWidth={window.innerWidth < 600}
                     >
-                      Удалить отпуска ({selectedEmployeeVacationDays} дн.)
+                      Удалить отпуска {selectedYear} ({selectedEmployeeVacationDays} дн.)
                     </Button>
                   )}
 
@@ -429,11 +423,12 @@ function App() {
           open={contextMenu !== null}
           anchorPosition={contextMenu !== null ? { top: contextMenu?.mouseY || 0, left: contextMenu?.mouseX || 0 } : null}
           employee={selectedEmployee}
+          year={selectedYear}
           onClose={handleCloseContextMenu}
           onDelete={deleteEmployeeById}
-          onDeleteVacations={(employeeId) => {
+          onDeleteVacations={(employeeId, year) => {
             selectEmployee(employeeId);
-            deleteAllEmployeeVacations();
+            deleteAllEmployeeVacations(year);
           }}
           onChangeColor={updateEmployeeColor}
           onRename={updateEmployeeName}

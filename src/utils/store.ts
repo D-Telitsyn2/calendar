@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { getCurrentYear, generateUniqueColor, formatDate, getDaysCount } from './dateUtils';
+import { getCurrentYear, generateUniqueColor, formatDate, getDaysCount, isVacationInYear } from './dateUtils';
 import { getEmployees, addEmployee, deleteEmployee, deleteAllEmployees, updateEmployee } from '../services/employeeService';
-import { getVacations, addVacation, deleteVacation, deleteEmployeeVacations, deleteAllAccountVacations } from '../services/vacationService';
+import { getVacations, addVacation, deleteVacation, deleteEmployeeVacations, deleteEmployeeVacationsInYear, deleteAllAccountVacations } from '../services/vacationService';
 import { preloadHolidaysForYear } from './holidayUtils';
 import { Employee, VacationPeriod } from '../types';
 import { getCurrentUser } from '../services/authService';
@@ -33,7 +33,7 @@ interface CalendarState {
   cancelSelection: () => void;
   selectVacation: (vacation: VacationPeriod | null, employee: Employee | null) => void;
   deleteVacation: () => Promise<void>;
-  deleteAllEmployeeVacations: () => Promise<void>;
+  deleteAllEmployeeVacations: (year?: number) => Promise<void>;
   resetDatabaseData: () => Promise<void>;
   updateEmployeeColor: (employeeId: string, color: string) => Promise<void>;
   updateEmployeeName: (employeeId: string, name: string) => Promise<void>;
@@ -255,7 +255,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     }
   },
 
-  deleteAllEmployeeVacations: async () => {
+  deleteAllEmployeeVacations: async (year?: number) => {
     const { selectedEmployeeId, employees, vacations } = get();
     const currentUser = getCurrentUser();
     if (!currentUser || !selectedEmployeeId) return;
@@ -263,22 +263,49 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     const employee = employees.find(emp => emp.id === selectedEmployeeId);
     if (!employee) return;
 
-    // Считаем общее количество дней отпуска
-    const totalVacationDays = getEmployeeVacationDaysCount(vacations, selectedEmployeeId);
+    // Calculate total vacation days for the specified year or all vacations
+    let totalVacationDays: number;
+    let confirmMessage: string;
+    
+    if (year !== undefined) {
+      // Count only vacations in the specified year
+      const vacationsInYear = vacations.filter(v => 
+        v.employeeId === selectedEmployeeId && isVacationInYear(v.startDate, v.endDate, year)
+      );
+      totalVacationDays = vacationsInYear.reduce((total, vacation) => 
+        total + getDaysCount(vacation.startDate, vacation.endDate), 0
+      );
+      confirmMessage = `Вы действительно хотите удалить отпуска ${year} года (${totalVacationDays} дн.) сотрудника "${employee.name}"?`;
+    } else {
+      totalVacationDays = getEmployeeVacationDaysCount(vacations, selectedEmployeeId);
+      confirmMessage = `Вы действительно хотите удалить ВСЕ отпуска (${totalVacationDays} дн.) сотрудника "${employee.name}"?`;
+    }
 
-    if (!confirm(`Вы действительно хотите удалить ВСЕ отпуска (${totalVacationDays} дн.) сотрудника "${employee.name}"?`)) {
+    if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
       const accountId = currentUser.uid;
-      await deleteEmployeeVacations(selectedEmployeeId, accountId);
-
-      set(state => ({
-        vacations: state.vacations.filter(v => v.employeeId !== selectedEmployeeId),
-        selectedEmployeeId: null,
-        selectionStart: null
-      }));
+      
+      if (year !== undefined) {
+        await deleteEmployeeVacationsInYear(selectedEmployeeId, accountId, year);
+        // Remove only vacations in the specified year from state
+        set(state => ({
+          vacations: state.vacations.filter(v => 
+            v.employeeId !== selectedEmployeeId || !isVacationInYear(v.startDate, v.endDate, year)
+          ),
+          selectedEmployeeId: null,
+          selectionStart: null
+        }));
+      } else {
+        await deleteEmployeeVacations(selectedEmployeeId, accountId);
+        set(state => ({
+          vacations: state.vacations.filter(v => v.employeeId !== selectedEmployeeId),
+          selectedEmployeeId: null,
+          selectionStart: null
+        }));
+      }
     } catch (error) {
       console.error('Ошибка при удалении отпусков сотрудника:', error);
       alert('Произошла ошибка при удалении отпусков');
