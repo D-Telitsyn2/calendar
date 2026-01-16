@@ -1,6 +1,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, Timestamp, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { VacationPeriod } from '../types';
+import { isVacationInYear } from '../utils/dateUtils';
 
 // Отпуска хранятся в коллекции vacations, с документами, которые содержат информацию о userId
 
@@ -114,8 +115,7 @@ export const deleteEmployeeVacationsInYear = async (employeeId: string, accountI
     const data = document.data() as FirebaseVacationData;
     const startDate = data.startDate.toDate();
     const endDate = data.endDate.toDate();
-    // Delete if vacation starts or ends in the specified year
-    return startDate.getFullYear() === year || endDate.getFullYear() === year;
+    return isVacationInYear(startDate, endDate, year);
   });
 
   await Promise.all(

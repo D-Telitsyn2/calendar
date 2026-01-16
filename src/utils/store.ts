@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getCurrentYear, generateUniqueColor, formatDate, getDaysCount } from './dateUtils';
+import { getCurrentYear, generateUniqueColor, formatDate, getDaysCount, isVacationInYear } from './dateUtils';
 import { getEmployees, addEmployee, deleteEmployee, deleteAllEmployees, updateEmployee } from '../services/employeeService';
 import { getVacations, addVacation, deleteVacation, deleteEmployeeVacations, deleteEmployeeVacationsInYear, deleteAllAccountVacations } from '../services/vacationService';
 import { preloadHolidaysForYear } from './holidayUtils';
@@ -269,12 +269,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     
     if (year !== undefined) {
       // Count only vacations in the specified year
-      const vacationsInYear = vacations.filter(v => {
-        if (v.employeeId !== selectedEmployeeId) return false;
-        const startYear = v.startDate.getFullYear();
-        const endYear = v.endDate.getFullYear();
-        return startYear === year || endYear === year;
-      });
+      const vacationsInYear = vacations.filter(v => 
+        v.employeeId === selectedEmployeeId && isVacationInYear(v.startDate, v.endDate, year)
+      );
       totalVacationDays = vacationsInYear.reduce((total, vacation) => 
         total + getDaysCount(vacation.startDate, vacation.endDate), 0
       );
@@ -295,12 +292,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         await deleteEmployeeVacationsInYear(selectedEmployeeId, accountId, year);
         // Remove only vacations in the specified year from state
         set(state => ({
-          vacations: state.vacations.filter(v => {
-            if (v.employeeId !== selectedEmployeeId) return true;
-            const startYear = v.startDate.getFullYear();
-            const endYear = v.endDate.getFullYear();
-            return startYear !== year && endYear !== year;
-          }),
+          vacations: state.vacations.filter(v => 
+            v.employeeId !== selectedEmployeeId || !isVacationInYear(v.startDate, v.endDate, year)
+          ),
           selectedEmployeeId: null,
           selectionStart: null
         }));

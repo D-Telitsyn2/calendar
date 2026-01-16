@@ -40,6 +40,13 @@ export const getDaysCount = (startDate: Date, endDate: Date): number => {
   return differenceInDays(endDate, startDate) + 1;
 };
 
+// Check if a vacation period is in a specific year
+export const isVacationInYear = (startDate: Date, endDate: Date, year: number): boolean => {
+  const startYear = startDate.getFullYear();
+  const endYear = endDate.getFullYear();
+  return startYear === year || endYear === year;
+};
+
 export const generateUniqueColor = (existingColors: string[]): string => {
   const predefinedColors = [
     '#aed6f1',

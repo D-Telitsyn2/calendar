@@ -4,7 +4,7 @@ import { Edit, Delete, FormatColorFill, EventBusy } from '@mui/icons-material';
 import { ChromePicker, ColorResult } from 'react-color';
 import { Employee } from '../types';
 import { useCalendarStore } from '../utils/store';
-import { getDaysCount } from '../utils/dateUtils';
+import { getDaysCount, isVacationInYear } from '../utils/dateUtils';
 
 interface EmployeeContextMenuProps {
   open: boolean;
@@ -37,12 +37,9 @@ const EmployeeContextMenu: React.FC<EmployeeContextMenuProps> = ({
 
   // Get vacation days count for the employee in the selected year
   const employeeVacationDays = employee
-    ? vacations.filter(v => {
-        if (v.employeeId !== employee.id) return false;
-        const startYear = v.startDate.getFullYear();
-        const endYear = v.endDate.getFullYear();
-        return startYear === year || endYear === year;
-      }).reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
+    ? vacations.filter(v => 
+        v.employeeId === employee.id && isVacationInYear(v.startDate, v.endDate, year)
+      ).reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
     : 0;
 
   const handleColorPickerOpen = () => {

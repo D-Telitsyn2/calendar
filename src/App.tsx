@@ -5,7 +5,7 @@ import Loader from './components/Loader'
 import { Auth } from './components/Auth'
 import EmployeeContextMenu from './components/EmployeeContextMenu'
 import { useCalendarStore } from './utils/store'
-import { getCurrentYear, formatDate, getDaysCount } from './utils/dateUtils'
+import { getCurrentYear, formatDate, getDaysCount, isVacationInYear } from './utils/dateUtils'
 import { onUserChanged, logout } from './services/authService';
 import type { User as FirebaseUser } from 'firebase/auth';
 
@@ -180,12 +180,9 @@ function App() {
 
   // Calculate vacation days for the selected employee in the selected year
   const selectedEmployeeVacationDays = selectedEmployeeId
-    ? vacations.filter(v => {
-        if (v.employeeId !== selectedEmployeeId) return false;
-        const startYear = v.startDate.getFullYear();
-        const endYear = v.endDate.getFullYear();
-        return startYear === selectedYear || endYear === selectedYear;
-      }).reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
+    ? vacations.filter(v => 
+        v.employeeId === selectedEmployeeId && isVacationInYear(v.startDate, v.endDate, selectedYear)
+      ).reduce((total, vacation) => total + getDaysCount(vacation.startDate, vacation.endDate), 0)
     : 0;
 
   return (
