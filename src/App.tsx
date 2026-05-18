@@ -223,12 +223,13 @@ function App() {
             </Box>
 
             {/* Title */}
-            <Box sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 1
-            }}>
+             <Box sx={{
+               display: 'flex',
+               flexDirection: 'row',
+               alignItems: 'center',
+               gap: 1,
+               mt: { xs: 3, sm: 0 }
+             }}>
               <IconButton
                 size="small"
                 onClick={handlePreviousYear}
@@ -241,8 +242,7 @@ function App() {
                 component="h1"
                 sx={{
                   fontWeight: 'bold',
-                  fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                  mt: { xs: 3, sm: 0 }
+                  fontSize: { xs: '1.2rem', sm: '1.5rem' }
                 }}
               >
                 Календарь отпусков {selectedYear}
