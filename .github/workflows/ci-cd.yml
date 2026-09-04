@@ -84,6 +84,7 @@ jobs:
           git fetch origin main
           git checkout origin/main
           npm ci
+          npm run build
           npm install -g firebase-tools
           npm install firebase-admin@13
 
