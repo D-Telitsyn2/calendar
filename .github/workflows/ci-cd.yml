@@ -53,7 +53,7 @@ jobs:
 
   automerge:
     needs: build
-    if: github.event_name == 'pull_request' && contains(github.event.pull_request.body, 'site-chat-automerge')
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.body, 'calendar-site-chat-automerge')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -62,4 +62,6 @@ jobs:
       - name: Merge PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr merge "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --squash --delete-branch
+        run: |
+          gh pr ready "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" || true
+          gh pr merge "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --squash --delete-branch

@@ -8,7 +8,7 @@ const REPO_URL = 'https://github.com/D-Telitsyn2/calendar'
 const CURSOR_API = 'https://api.cursor.com/v1/agents'
 const MAX_MESSAGE_LENGTH = 4000
 const HOURLY_LIMIT = 8
-const AUTOMERGE_MARKER = '<!-- site-chat-automerge -->'
+const AUTOMERGE_MARKER = '<!-- calendar-site-chat-automerge -->'
 
 type CursorCreateResponse = {
   agent?: {
@@ -28,7 +28,7 @@ function buildPrompt(message: string, email: string): string {
     '',
     'Сделай правки в репозитории, открой PR в main.',
     `В описании PR обязательно отдельной строкой: ${AUTOMERGE_MARKER}`,
-    'Сам PR не мержи — после зелёных проверок его смержит GitHub Action.',
+    'Черновик у PR сними (draft: false), сам не мержи — после зелёных проверок его смержит GitHub Action.',
     'Пиши в стиле репозитория, без лишних файлов и без воды в описании.',
   ].join('\n')
 }
