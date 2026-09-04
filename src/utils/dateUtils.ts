@@ -17,7 +17,22 @@ export const toStoredTimestamp = (date: Date): Date => {
 
 /** Timestamp из Firestore → календарный день в поясе зрителя. */
 export const fromStoredTimestamp = (date: Date): Date => {
+  // Полдень UTC — день, который записали; иначе старые полночи в локальном поясе.
+  if (date.getUTCHours() === 12) {
+    return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  }
   return toCalendarDate(date);
+};
+
+/** Начало отпуска в ближайшие `withinDays` дней, но ещё не сегодня. */
+export const isUpcomingVacationStart = (today: Date, startDate: Date, withinDays = 14): boolean => {
+  const day = toCalendarDate(today);
+  const start = toCalendarDate(startDate);
+  if (start.getTime() <= day.getTime()) {
+    return false;
+  }
+  const until = new Date(day.getFullYear(), day.getMonth(), day.getDate() + withinDays);
+  return start.getTime() <= until.getTime();
 };
 
 export const formatDate = (date: Date): string => {
