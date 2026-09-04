@@ -2,7 +2,6 @@ import {
   addDoc,
   collection,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   where,
@@ -56,27 +55,31 @@ export function subscribeAgentRequests(
 ): Unsubscribe {
   const requestsQuery = query(
     collection(db, 'agentRequests'),
-    where('accountId', '==', accountId),
-    orderBy('createdAt', 'desc')
+    where('accountId', '==', accountId)
   )
 
   return onSnapshot(
     requestsQuery,
     (snapshot) => {
-      const items = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data()
-        return {
-          id: docSnap.id,
-          message: String(data.message || ''),
-          status: (data.status || 'pending') as AgentRequestStatus,
-          prUrl: typeof data.prUrl === 'string' ? data.prUrl : undefined,
-          error: typeof data.error === 'string' ? data.error : undefined,
-          createdAtMs: data.createdAt?.toMillis?.() || Date.now()
-        }
-      })
+      const items = snapshot.docs
+        .map((docSnap) => {
+          const data = docSnap.data()
+          return {
+            id: docSnap.id,
+            message: String(data.message || ''),
+            status: (data.status || 'pending') as AgentRequestStatus,
+            prUrl: typeof data.prUrl === 'string' ? data.prUrl : undefined,
+            error: typeof data.error === 'string' ? data.error : undefined,
+            createdAtMs: data.createdAt?.toMillis?.() || Date.now()
+          }
+        })
+        .sort((left, right) => right.createdAtMs - left.createdAtMs)
       onChange(items)
     },
     (error) => {
+      if (error.message.includes('index')) {
+        return
+      }
       onError?.(error.message)
     }
   )

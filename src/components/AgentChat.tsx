@@ -31,7 +31,10 @@ interface AgentChatProps {
 function errorText(error: unknown): string {
   if (error instanceof FirebaseError) {
     if (error.code === 'permission-denied') {
-      return 'Нет доступа к чату агента'
+      return 'Нет доступа'
+    }
+    if (error.code === 'failed-precondition' || error.message.includes('index')) {
+      return 'Список ещё готовится, напишите задачу — она сохранится'
     }
     return error.message.replace(/^Firebase:\s*/i, '')
   }
@@ -110,7 +113,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
             zIndex: 20,
             width: { xs: 'calc(100vw - 32px)', sm: 380 },
             maxWidth: 380,
-            height: 460,
+            height: 380,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
@@ -118,20 +121,11 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
         >
           <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
             <Typography variant="subtitle1" fontWeight={600}>
-              Что изменить на сайте
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Напишите обычными словами. Правка уйдёт в работу сама, на сайт попадёт после проверки.
+              Задача агенту
             </Typography>
           </Box>
 
           <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {requests.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                Например: «сделай кнопку выхода красной» или «подпиши дни недели полностью».
-              </Typography>
-            )}
-
             {requests.map((item) => (
               <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                 <Paper variant="outlined" sx={{ p: 1.2, bgcolor: 'grey.50' }}>
