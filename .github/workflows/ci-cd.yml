@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -50,7 +50,7 @@ jobs:
     timeout-minutes: 15
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -101,7 +101,7 @@ jobs:
           gh pr merge "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --squash --delete-branch
 
       - name: Checkout merged main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
