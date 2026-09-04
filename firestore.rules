@@ -45,6 +45,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /agentSessions/{sessionId} {
+      allow read, write: if false;
+    }
+
     match /config/agentChatAccess {
       allow read: if signedIn();
       allow write: if false;
