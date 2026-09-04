@@ -1,8 +1,6 @@
 name: Process agent chat
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
   repository_dispatch:
     types: [agent-chat]
