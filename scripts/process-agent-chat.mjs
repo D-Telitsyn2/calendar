@@ -39,13 +39,26 @@ async function readApiKey(db) {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
+function cursorAuth(apiKey) {
+  return {
+    Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`,
+    'Content-Type': 'application/json',
+  }
+}
+
+function pickPrUrl(payload) {
+  const branches = payload?.git?.branches
+  if (!Array.isArray(branches)) {
+    return ''
+  }
+  const withPr = branches.find((item) => typeof item?.prUrl === 'string' && item.prUrl)
+  return withPr?.prUrl || ''
+}
+
 async function startAgent(apiKey, message, email) {
   const response = await fetch(CURSOR_API, {
     method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`,
-      'Content-Type': 'application/json',
-    },
+    headers: cursorAuth(apiKey),
     body: JSON.stringify({
       prompt: { text: buildPrompt(message, email) },
       name: `Сайт: ${message.slice(0, 60)}`,
@@ -72,18 +85,55 @@ async function startAgent(apiKey, message, email) {
   return { agentId, agentUrl, agentName: payload.agent?.name || '' }
 }
 
-async function main() {
-  initializeApp({
-    credential: cert(readServiceAccount()),
-    projectId: PROJECT_ID,
-  })
+async function refreshStarted(db, apiKey) {
+  const started = await db.collection('agentRequests').where('status', '==', 'started').limit(20).get()
 
-  const db = getFirestore()
-  const apiKey = await readApiKey(db)
-  if (!apiKey) {
-    throw new Error('Нет ключа Cursor: секрет CURSOR_API_KEY или Firestore internal/cursorConfig.apiKey')
+  for (const doc of started.docs) {
+    const agentId = doc.data()?.agentId
+    if (!agentId) {
+      continue
+    }
+
+    const agentResponse = await fetch(`${CURSOR_API}/${agentId}`, { headers: cursorAuth(apiKey) })
+    if (!agentResponse.ok) {
+      console.error(`Не удалось прочитать агента ${agentId}: ${agentResponse.status}`)
+      continue
+    }
+
+    const agent = await agentResponse.json()
+    const runId = agent.latestRunId
+    if (!runId) {
+      continue
+    }
+
+    const runResponse = await fetch(`${CURSOR_API}/${agentId}/runs/${runId}`, { headers: cursorAuth(apiKey) })
+    if (!runResponse.ok) {
+      console.error(`Не удалось прочитать запуск ${runId}: ${runResponse.status}`)
+      continue
+    }
+
+    const run = await runResponse.json()
+    const prUrl = pickPrUrl(run)
+    const updates = {}
+    if (prUrl && prUrl !== doc.data()?.prUrl) {
+      updates.prUrl = prUrl
+    }
+
+    if (run.status === 'FINISHED') {
+      updates.status = 'done'
+    }
+    if (run.status === 'ERROR' || run.status === 'EXPIRED' || run.status === 'CANCELLED') {
+      updates.status = 'error'
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await doc.ref.update(updates)
+      console.log(`Обновлено ${doc.id}: ${JSON.stringify(updates)}`)
+    }
   }
+}
 
+async function processPending(db, apiKey) {
   const pending = await db
     .collection('agentRequests')
     .where('status', '==', 'pending')
@@ -119,7 +169,7 @@ async function main() {
         agentName: result.agentName,
         processedAt: FieldValue.serverTimestamp(),
       })
-      console.log(`Запущено: ${doc.id} -> ${result.agentUrl}`)
+      console.log(`Запущено: ${doc.id}`)
     } catch (error) {
       const details = error instanceof Error ? error.message : String(error)
       await doc.ref.update({
@@ -129,6 +179,22 @@ async function main() {
       console.error(`Ошибка ${doc.id}: ${details}`)
     }
   }
+}
+
+async function main() {
+  initializeApp({
+    credential: cert(readServiceAccount()),
+    projectId: PROJECT_ID,
+  })
+
+  const db = getFirestore()
+  const apiKey = await readApiKey(db)
+  if (!apiKey) {
+    throw new Error('Нет ключа Cursor: секрет CURSOR_API_KEY или Firestore internal/cursorConfig.apiKey')
+  }
+
+  await processPending(db, apiKey)
+  await refreshStarted(db, apiKey)
 }
 
 main().catch((error) => {

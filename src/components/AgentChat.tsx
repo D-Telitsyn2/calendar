@@ -4,7 +4,6 @@ import {
   CircularProgress,
   Fab,
   IconButton,
-  Link,
   Paper,
   TextField,
   Typography
@@ -32,7 +31,10 @@ interface AgentChatProps {
 function errorText(error: unknown): string {
   if (error instanceof FirebaseError) {
     if (error.code === 'permission-denied') {
-      return 'Нет доступа к чату агента'
+      return 'Нет доступа'
+    }
+    if (error.code === 'failed-precondition' || error.message.includes('index')) {
+      return 'Список ещё готовится, напишите задачу — она сохранится'
     }
     return error.message.replace(/^Firebase:\s*/i, '')
   }
@@ -94,7 +96,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
     <>
       <Fab
         color="primary"
-        aria-label="Чат с агентом"
+        aria-label="Написать, что изменить"
         onClick={() => setOpen((value) => !value)}
         sx={{ position: 'fixed', right: 20, bottom: 20, zIndex: 20 }}
       >
@@ -111,7 +113,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
             zIndex: 20,
             width: { xs: 'calc(100vw - 32px)', sm: 380 },
             maxWidth: 380,
-            height: 460,
+            height: 380,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
@@ -121,40 +123,19 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
             <Typography variant="subtitle1" fontWeight={600}>
               Задача агенту
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Сообщение попадёт в очередь. GitHub запустит агента в течение нескольких минут, затем будет PR.
-            </Typography>
           </Box>
 
           <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {requests.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                Например: «сделай кнопку выхода красной» или «подпиши дни недели полностью».
-              </Typography>
-            )}
-
             {requests.map((item) => (
               <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                 <Paper variant="outlined" sx={{ p: 1.2, bgcolor: 'grey.50' }}>
                   <Typography variant="body2">{item.message}</Typography>
                 </Paper>
-                <Typography variant="caption" color="text.secondary">
-                  {item.status === 'pending' && 'В очереди, агент возьмёт задачу в ближайшие минуты'}
-                  {item.status === 'starting' && 'Запускаю агента…'}
-                  {item.status === 'started' && (
-                    <>
-                      Агент работает
-                      {item.agentUrl && (
-                        <>
-                          {' · '}
-                          <Link href={item.agentUrl} target="_blank" rel="noreferrer">
-                            открыть в Cursor
-                          </Link>
-                        </>
-                      )}
-                    </>
-                  )}
-                  {item.status === 'error' && (item.error || 'Ошибка запуска')}
+                <Typography variant="caption" color={item.status === 'error' ? 'error' : 'text.secondary'}>
+                  {item.status === 'pending' && 'Принято, скоро возьмём в работу'}
+                  {(item.status === 'starting' || item.status === 'started') && 'Делаем'}
+                  {item.status === 'done' && 'Готово. Скоро появится на сайте'}
+                  {item.status === 'error' && 'Не получилось, напишите ещё раз'}
                 </Typography>
               </Box>
             ))}
