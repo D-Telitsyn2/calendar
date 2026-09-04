@@ -3,6 +3,7 @@ import { Paper, Typography, Box } from '@mui/material';
 import { format, isSameMonth } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useCalendarStore } from '../utils/store';
+import { toCalendarDate } from '../utils/dateUtils';
 import { VacationPeriod, Employee } from '../types';
 
 interface ActiveVacation {
@@ -24,10 +25,8 @@ const OnVacationWidget: React.FC = () => {
   const activeVacations: ActiveVacation[] = useMemo(() => {
     return vacations
       .filter(vacation => {
-        const startDate = new Date(vacation.startDate);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(vacation.endDate);
-        endDate.setHours(0, 0, 0, 0);
+        const startDate = toCalendarDate(vacation.startDate);
+        const endDate = toCalendarDate(vacation.endDate);
         
         return today >= startDate && today <= endDate;
       })
