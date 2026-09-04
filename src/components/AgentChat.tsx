@@ -107,7 +107,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
   return (
     <>
       <Fab
-        color="success"
+        color="primary"
         aria-label="Написать, что изменить"
         onClick={() => setOpen((value) => !value)}
         sx={{ position: 'fixed', right: 20, bottom: 20, zIndex: 20 }}
