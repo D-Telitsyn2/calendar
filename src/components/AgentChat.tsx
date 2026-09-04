@@ -14,9 +14,14 @@ import CloseIcon from '@mui/icons-material/Close'
 import SendIcon from '@mui/icons-material/Send'
 import { FirebaseError } from 'firebase/app'
 import { startCursorAgent, subscribeAgentRequests, type AgentRequest } from '../services/agentChat'
+import {
+  isEmailOnAllowlist,
+  subscribeAgentChatAllowlist
+} from '../services/agentChatAccess'
 
 interface AgentChatProps {
   accountId: string
+  email: string | null
 }
 
 function errorText(error: unknown): string {
@@ -29,7 +34,8 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Не удалось отправить'
 }
 
-const AgentChat = ({ accountId }: AgentChatProps) => {
+const AgentChat = ({ accountId, email }: AgentChatProps) => {
+  const [allowed, setAllowed] = useState(false)
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -37,8 +43,23 @@ const AgentChat = ({ accountId }: AgentChatProps) => {
   const [requests, setRequests] = useState<AgentRequest[]>([])
 
   useEffect(() => {
+    return subscribeAgentChatAllowlist((emails) => {
+      setAllowed(isEmailOnAllowlist(email, emails))
+    })
+  }, [email])
+
+  useEffect(() => {
+    if (!allowed) {
+      setRequests([])
+      setOpen(false)
+      return
+    }
     return subscribeAgentRequests(accountId, setRequests, setLocalError)
-  }, [accountId])
+  }, [accountId, allowed])
+
+  if (!allowed) {
+    return null
+  }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()

@@ -444,7 +444,7 @@ function App() {
           onRename={updateEmployeeName}
         />
       </Container>
-      <AgentChat accountId={user.uid} />
+      <AgentChat accountId={user.uid} email={user.email} />
     </Box>
   )
 }

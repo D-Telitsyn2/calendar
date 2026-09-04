@@ -9,6 +9,7 @@ const CURSOR_API = 'https://api.cursor.com/v1/agents'
 const MAX_MESSAGE_LENGTH = 4000
 const HOURLY_LIMIT = 8
 const AUTOMERGE_MARKER = '<!-- calendar-site-chat-automerge -->'
+const DEFAULT_ALLOWED_EMAILS = ['frontend@calendar.ru']
 
 type CursorCreateResponse = {
   agent?: {
@@ -33,6 +34,21 @@ function buildPrompt(message: string, email: string): string {
   ].join('\n')
 }
 
+async function isEmailAllowed(email: string): Promise<boolean> {
+  const needle = email.trim().toLowerCase()
+  if (!needle) {
+    return false
+  }
+
+  const snap = await getFirestore().doc('config/agentChatAccess').get()
+  const raw = snap.data()?.emails
+  const emails = Array.isArray(raw)
+    ? raw.filter((item): item is string => typeof item === 'string')
+    : DEFAULT_ALLOWED_EMAILS
+
+  return emails.some((item) => item.trim().toLowerCase() === needle)
+}
+
 async function readApiKey(): Promise<string | null> {
   if (process.env.CURSOR_API_KEY?.trim()) {
     return process.env.CURSOR_API_KEY.trim()
@@ -52,6 +68,11 @@ export const startCursorAgent = onCall(
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Нужно войти в аккаунт')
+    }
+
+    const email = request.auth.token.email || ''
+    if (!(await isEmailAllowed(email))) {
+      throw new HttpsError('permission-denied', 'Нет доступа к чату агента')
     }
 
     const message = typeof request.data?.message === 'string' ? request.data.message.trim() : ''
@@ -83,7 +104,6 @@ export const startCursorAgent = onCall(
       )
     }
 
-    const email = request.auth.token.email || request.auth.uid
     const docRef = db.collection('agentRequests').doc()
     await docRef.set({
       accountId: request.auth.uid,
