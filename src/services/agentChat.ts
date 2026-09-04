@@ -1,6 +1,8 @@
 import {
   addDoc,
   collection,
+  doc,
+  getDoc,
   onSnapshot,
   query,
   serverTimestamp,
@@ -22,6 +24,31 @@ export interface AgentRequest {
 
 const MAX_MESSAGE_LENGTH = 4000
 const HOURLY_LIMIT = 8
+const WORKFLOW_DISPATCH_URL =
+  'https://api.github.com/repos/D-Telitsyn2/calendar/actions/workflows/process-agent-chat.yml/dispatches'
+
+async function kickChatProcessor(): Promise<void> {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'githubDispatch'))
+    const token = snap.data()?.token
+    if (typeof token !== 'string' || !token.trim()) {
+      return
+    }
+
+    await fetch(WORKFLOW_DISPATCH_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ref: 'main' })
+    })
+  } catch {
+    // Заявка уже в Firestore. Если GitHub с браузера не пускает — сработает внешний cron.
+  }
+}
 
 export async function startCursorAgent(message: string): Promise<{ id: string }> {
   const user = auth.currentUser
@@ -44,6 +71,8 @@ export async function startCursorAgent(message: string): Promise<{ id: string }>
     status: 'pending',
     createdAt: serverTimestamp()
   })
+
+  void kickChatProcessor()
 
   return { id: ref.id }
 }

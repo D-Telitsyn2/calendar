@@ -53,5 +53,10 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if false;
     }
+
+    match /config/githubDispatch {
+      allow read: if agentChatEmailAllowed();
+      allow write: if false;
+    }
   }
 }
