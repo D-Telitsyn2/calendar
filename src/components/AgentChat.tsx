@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import {
   Box,
   CircularProgress,
@@ -48,6 +48,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
   const [sending, setSending] = useState(false)
   const [localError, setLocalError] = useState('')
   const [requests, setRequests] = useState<AgentRequest[]>([])
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     return subscribeAgentChatAllowlist((emails) => {
@@ -63,6 +64,17 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
     }
     return subscribeAgentRequests(accountId, setRequests, setLocalError)
   }, [accountId, allowed])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    const node = listRef.current
+    if (!node) {
+      return
+    }
+    node.scrollTop = node.scrollHeight
+  }, [open, requests])
 
   if (!allowed) {
     return null
@@ -125,7 +137,10 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
             </Typography>
           </Box>
 
-          <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Box
+            ref={listRef}
+            sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}
+          >
             {requests.map((item) => (
               <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                 <Paper variant="outlined" sx={{ p: 1.2, bgcolor: 'grey.50' }}>
@@ -134,7 +149,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
                 <Typography variant="caption" color={item.status === 'error' ? 'error' : 'text.secondary'}>
                   {item.status === 'pending' && 'Принято, скоро возьмём в работу'}
                   {(item.status === 'starting' || item.status === 'started') && 'Делаем'}
-                  {item.status === 'done' && 'Готово. Скоро появится на сайте'}
+                  {item.status === 'done' && 'Готово'}
                   {item.status === 'error' && 'Не получилось, напишите ещё раз'}
                 </Typography>
               </Box>

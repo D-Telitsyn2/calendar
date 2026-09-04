@@ -55,6 +55,100 @@ function pickPrUrl(payload) {
   return withPr?.prUrl || ''
 }
 
+function buildFollowUpPrompt(message, email) {
+  return [
+    `Продолжение того же разговора. Кто пишет: ${email}`,
+    '',
+    'Сообщение:',
+    message,
+    '',
+    'Учти предыдущие сообщения этой сессии. Если нужны новые правки — открывай или обновляй PR.',
+    `В описании PR отдельной строкой: ${AUTOMERGE_MARKER}`,
+    'Черновик сними. Сам не мержи.',
+  ].join('\n')
+}
+
+async function getAgentStatus(apiKey, agentId) {
+  const response = await fetch(`${CURSOR_API}/${agentId}`, { headers: cursorAuth(apiKey) })
+  if (response.status === 404) {
+    return null
+  }
+  if (!response.ok) {
+    throw new Error(`Cursor API GET agent: ${response.status}`)
+  }
+  return response.json()
+}
+
+async function followUpAgent(apiKey, agentId, message, email) {
+  const response = await fetch(`${CURSOR_API}/${agentId}/runs`, {
+    method: 'POST',
+    headers: cursorAuth(apiKey),
+    body: JSON.stringify({
+      prompt: { text: buildFollowUpPrompt(message, email) },
+    }),
+  })
+
+  const rawText = await response.text()
+  if (response.status === 409) {
+    const error = new Error('agent_busy')
+    error.code = 'agent_busy'
+    throw error
+  }
+  if (!response.ok) {
+    throw new Error(`Cursor API follow-up: ${response.status}. ${rawText.slice(0, 500)}`)
+  }
+
+  return {
+    agentId,
+    agentUrl: `https://cursor.com/agents/${agentId}`,
+  }
+}
+
+async function readSession(db, accountId) {
+  if (!accountId) {
+    return null
+  }
+  const snap = await db.doc(`agentSessions/${accountId}`).get()
+  const stored = snap.data()?.agentId
+  if (typeof stored === 'string' && stored) {
+    return stored
+  }
+
+  const history = await db.collection('agentRequests').where('accountId', '==', accountId).get()
+  const latest = history.docs
+    .map((item) => item.data())
+    .filter((item) => typeof item.agentId === 'string' && item.agentId)
+    .sort((left, right) => (right.createdAt?.toMillis?.() || 0) - (left.createdAt?.toMillis?.() || 0))[0]
+
+  return latest?.agentId || null
+}
+
+async function writeSession(db, accountId, agentId, agentUrl) {
+  if (!accountId || !agentId) {
+    return
+  }
+  await db.doc(`agentSessions/${accountId}`).set({
+    agentId,
+    agentUrl: agentUrl || '',
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+}
+
+async function sendToAgent(db, apiKey, claimed) {
+  const email = claimed.email || ''
+  const sessionAgentId = await readSession(db, claimed.accountId)
+  if (sessionAgentId) {
+    const agent = await getAgentStatus(apiKey, sessionAgentId)
+    if (agent && (agent.status === 'ACTIVE' || agent.status === 'IDLE')) {
+      const result = await followUpAgent(apiKey, sessionAgentId, claimed.message, email)
+      return { ...result, followUp: true }
+    }
+  }
+
+  const created = await startAgent(apiKey, claimed.message, email)
+  return { ...created, followUp: false }
+}
+
 async function startAgent(apiKey, message, email) {
   const response = await fetch(CURSOR_API, {
     method: 'POST',
@@ -119,9 +213,6 @@ async function refreshStarted(db, apiKey) {
       updates.prUrl = prUrl
     }
 
-    if (run.status === 'FINISHED') {
-      updates.status = 'done'
-    }
     if (run.status === 'ERROR' || run.status === 'EXPIRED' || run.status === 'CANCELLED') {
       updates.status = 'error'
     }
@@ -161,16 +252,23 @@ async function processPending(db, apiKey) {
     }
 
     try {
-      const result = await startAgent(apiKey, claimed.message, claimed.email || '')
+      const result = await sendToAgent(db, apiKey, claimed)
+      await writeSession(db, claimed.accountId, result.agentId, result.agentUrl)
       await doc.ref.update({
         status: 'started',
         agentId: result.agentId,
         agentUrl: result.agentUrl,
-        agentName: result.agentName,
+        agentName: result.agentName || '',
+        followUp: Boolean(result.followUp),
         processedAt: FieldValue.serverTimestamp(),
       })
-      console.log(`Запущено: ${doc.id}`)
+      console.log(`${result.followUp ? 'Дописано' : 'Запущено'}: ${doc.id}`)
     } catch (error) {
+      if (error && error.code === 'agent_busy') {
+        await doc.ref.update({ status: 'pending' })
+        console.log(`Агент занят, заявка ${doc.id} вернётся в очередь`)
+        continue
+      }
       const details = error instanceof Error ? error.message : String(error)
       await doc.ref.update({
         status: 'error',
