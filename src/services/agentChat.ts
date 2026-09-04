@@ -1,15 +1,16 @@
-import { getFunctions, httpsCallable } from 'firebase/functions'
 import {
+  addDoc,
   collection,
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
   where,
   type Unsubscribe
 } from 'firebase/firestore'
-import { app, db } from './firebase'
+import { auth, db } from './firebase'
 
-export type AgentRequestStatus = 'starting' | 'started' | 'error'
+export type AgentRequestStatus = 'pending' | 'starting' | 'started' | 'error'
 
 export interface AgentRequest {
   id: string
@@ -20,21 +21,32 @@ export interface AgentRequest {
   createdAtMs: number
 }
 
-type StartCursorAgentResponse = {
-  id: string
-  agentId: string
-  agentUrl: string
-}
+const MAX_MESSAGE_LENGTH = 4000
+const HOURLY_LIMIT = 8
 
-const functions = getFunctions(app, 'us-central1')
-const startCursorAgentFn = httpsCallable<{ message: string }, StartCursorAgentResponse>(
-  functions,
-  'startCursorAgent'
-)
+export async function startCursorAgent(message: string): Promise<{ id: string }> {
+  const user = auth.currentUser
+  if (!user?.email) {
+    throw new Error('Нужно войти в аккаунт')
+  }
 
-export async function startCursorAgent(message: string): Promise<StartCursorAgentResponse> {
-  const result = await startCursorAgentFn({ message })
-  return result.data
+  const text = message.trim()
+  if (!text) {
+    throw new Error('Напишите, что нужно сделать')
+  }
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    throw new Error(`Сообщение длиннее ${MAX_MESSAGE_LENGTH} символов`)
+  }
+
+  const ref = await addDoc(collection(db, 'agentRequests'), {
+    accountId: user.uid,
+    email: user.email,
+    message: text,
+    status: 'pending',
+    createdAt: serverTimestamp()
+  })
+
+  return { id: ref.id }
 }
 
 export function subscribeAgentRequests(
@@ -56,7 +68,7 @@ export function subscribeAgentRequests(
         return {
           id: docSnap.id,
           message: String(data.message || ''),
-          status: (data.status || 'starting') as AgentRequestStatus,
+          status: (data.status || 'pending') as AgentRequestStatus,
           agentUrl: typeof data.agentUrl === 'string' ? data.agentUrl : undefined,
           error: typeof data.error === 'string' ? data.error : undefined,
           createdAtMs: data.createdAt?.toMillis?.() || Date.now()
@@ -68,4 +80,9 @@ export function subscribeAgentRequests(
       onError?.(error.message)
     }
   )
+}
+
+export function hourlyLimitReached(items: AgentRequest[]): boolean {
+  const hourAgo = Date.now() - 60 * 60 * 1000
+  return items.filter((item) => item.createdAtMs >= hourAgo).length >= HOURLY_LIMIT
 }

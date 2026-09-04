@@ -1,23 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Правила для работы с сотрудниками
-    match /employees/{employeeId} {
-      allow read: if request.auth != null && resource.data.accountId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.accountId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.accountId == request.auth.uid;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // Правила для работы с отпусками
+    function agentChatEmailAllowed() {
+      return signedIn()
+        && request.auth.token.email is string
+        && (
+          exists(/databases/$(database)/documents/config/agentChatAccess)
+            ? request.auth.token.email.lower() in get(/databases/$(database)/documents/config/agentChatAccess).data.emails
+            : request.auth.token.email.lower() == 'frontend@calendar.ru'
+        );
+    }
+
+    match /employees/{employeeId} {
+      allow read: if signedIn() && resource.data.accountId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.accountId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.accountId == request.auth.uid;
+    }
+
     match /vacations/{vacationId} {
-      allow read: if request.auth != null && resource.data.accountId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.accountId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.accountId == request.auth.uid;
+      allow read: if signedIn() && resource.data.accountId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.accountId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.accountId == request.auth.uid;
     }
 
     match /agentRequests/{requestId} {
-      allow read: if request.auth != null && resource.data.accountId == request.auth.uid;
-      allow write: if false;
+      allow read: if signedIn() && resource.data.accountId == request.auth.uid;
+      allow create: if agentChatEmailAllowed()
+        && request.resource.data.accountId == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 4000
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.keys().hasOnly(['accountId', 'email', 'message', 'status', 'createdAt']);
+      allow update, delete: if false;
     }
 
     match /internal/{document=**} {
@@ -25,7 +46,7 @@ service cloud.firestore {
     }
 
     match /config/agentChatAccess {
-      allow read: if request.auth != null;
+      allow read: if signedIn();
       allow write: if false;
     }
   }

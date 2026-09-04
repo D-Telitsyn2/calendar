@@ -13,7 +13,12 @@ import ChatIcon from '@mui/icons-material/Chat'
 import CloseIcon from '@mui/icons-material/Close'
 import SendIcon from '@mui/icons-material/Send'
 import { FirebaseError } from 'firebase/app'
-import { startCursorAgent, subscribeAgentRequests, type AgentRequest } from '../services/agentChat'
+import {
+  hourlyLimitReached,
+  startCursorAgent,
+  subscribeAgentRequests,
+  type AgentRequest
+} from '../services/agentChat'
 import {
   isEmailOnAllowlist,
   subscribeAgentChatAllowlist
@@ -26,8 +31,8 @@ interface AgentChatProps {
 
 function errorText(error: unknown): string {
   if (error instanceof FirebaseError) {
-    if (error.code === 'functions/not-found' || error.code === 'functions/unavailable') {
-      return 'Серверная функция ещё не выложена. Нужен тариф Blaze и firebase deploy --only functions.'
+    if (error.code === 'permission-denied') {
+      return 'Нет доступа к чату агента'
     }
     return error.message.replace(/^Firebase:\s*/i, '')
   }
@@ -65,6 +70,11 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
     event.preventDefault()
     const message = text.trim()
     if (!message || sending) {
+      return
+    }
+
+    if (hourlyLimitReached(requests)) {
+      setLocalError('Слишком много запросов за час, подождите')
       return
     }
 
@@ -112,7 +122,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
               Задача агенту
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Сообщение уйдёт в Cursor, агент сам сделает PR. После тестов PR смержится.
+              Сообщение попадёт в очередь. GitHub запустит агента в течение нескольких минут, затем будет PR.
             </Typography>
           </Box>
 
@@ -129,6 +139,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
                   <Typography variant="body2">{item.message}</Typography>
                 </Paper>
                 <Typography variant="caption" color="text.secondary">
+                  {item.status === 'pending' && 'В очереди, агент возьмёт задачу в ближайшие минуты'}
                   {item.status === 'starting' && 'Запускаю агента…'}
                   {item.status === 'started' && (
                     <>
