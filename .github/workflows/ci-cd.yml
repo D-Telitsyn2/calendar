@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   build:
@@ -11,15 +12,16 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
         node-version: '22'
+        cache: 'npm'
 
     - name: Install dependencies
-      run: npm install
+      run: npm ci
 
     - name: Run lint
       run: npm run lint
@@ -28,9 +30,26 @@ jobs:
       run: npm run build
 
     - name: Install Firebase CLI
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: npm install -g firebase-tools
 
-    - name: Deploy to Firebase
-      run: firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
+    - name: Deploy hosting and Firestore
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: firebase deploy --only hosting,firestore --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
       env:
         FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+  automerge:
+    needs: build
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.body, 'calendar-site-chat-automerge')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr ready "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" || true
+          gh pr merge "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --squash --delete-branch

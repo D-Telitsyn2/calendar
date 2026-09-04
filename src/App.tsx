@@ -5,6 +5,7 @@ import Loader from './components/Loader'
 import { Auth } from './components/Auth'
 import EmployeeContextMenu from './components/EmployeeContextMenu'
 import OnVacationWidget from './components/OnVacationWidget'
+import AgentChat from './components/AgentChat'
 import { useCalendarStore } from './utils/store'
 import { getCurrentYear, formatDate, getDaysCount, isVacationInYear } from './utils/dateUtils'
 import { onUserChanged, logout } from './services/authService';
@@ -443,6 +444,7 @@ function App() {
           onRename={updateEmployeeName}
         />
       </Container>
+      <AgentChat accountId={user.uid} email={user.email} />
     </Box>
   )
 }
