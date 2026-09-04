@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import {
   Box,
   CircularProgress,
@@ -49,6 +49,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
   const [localError, setLocalError] = useState('')
   const [requests, setRequests] = useState<AgentRequest[]>([])
   const listRef = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     return subscribeAgentChatAllowlist((emails) => {
@@ -104,6 +105,13 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
     }
   }
 
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      formRef.current?.requestSubmit()
+    }
+  }
+
   return (
     <>
       <Fab
@@ -156,7 +164,12 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
             ))}
           </Box>
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Box
+            component="form"
+            ref={formRef}
+            onSubmit={handleSubmit}
+            sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}
+          >
             {localError && (
               <Typography variant="caption" color="error" sx={{ display: 'block', mb: 1 }}>
                 {localError}
@@ -166,6 +179,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
               <TextField
                 value={text}
                 onChange={(event) => setText(event.target.value)}
+                onKeyDown={handleComposerKeyDown}
                 placeholder="Что изменить на сайте?"
                 size="small"
                 fullWidth
