@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getCurrentYear, generateUniqueColor, formatDate, getDaysCount, isVacationInYear } from './dateUtils';
+import { getCurrentYear, generateUniqueColor, formatDate, getDaysCount, isVacationInYear, toCalendarDate } from './dateUtils';
 import { getEmployees, addEmployee, deleteEmployee, deleteAllEmployees, updateEmployee } from '../services/employeeService';
 import { getVacations, addVacation, deleteVacation, deleteEmployeeVacations, deleteEmployeeVacationsInYear, deleteAllAccountVacations } from '../services/vacationService';
 import { preloadHolidaysForYear } from './holidayUtils';
@@ -188,8 +188,8 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
     try {
       const accountId = currentUser.uid;
-      const normalizedSelectionStart = new Date(selectionStart.getFullYear(), selectionStart.getMonth(), selectionStart.getDate());
-      const normalizedEndDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const normalizedSelectionStart = toCalendarDate(selectionStart);
+      const normalizedEndDate = toCalendarDate(date);
 
       const newVacation: Omit<VacationPeriod, 'id'> = {
         employeeId: selectedEmployeeId,

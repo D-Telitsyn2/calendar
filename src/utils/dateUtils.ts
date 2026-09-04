@@ -1,5 +1,24 @@
-import { format, isWithinInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, eachMonthOfInterval, eachDayOfInterval, getYear, differenceInDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, eachMonthOfInterval, eachDayOfInterval, getYear, differenceInDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
+
+/** Календарный день без времени: полночь в поясе пользователя. */
+export const toCalendarDate = (date: Date): Date => {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+/**
+ * Timestamp для Firestore: полдень UTC выбранного календарного дня.
+ * Так день не съезжает у людей в другом поясе (полночь в Москве — ещё предыдущий день в UTC,
+ * а в Грузии та же полночь на час раньше и не попадает в интервал).
+ */
+export const toStoredTimestamp = (date: Date): Date => {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
+};
+
+/** Timestamp из Firestore → календарный день в поясе зрителя. */
+export const fromStoredTimestamp = (date: Date): Date => {
+  return toCalendarDate(date);
+};
 
 export const formatDate = (date: Date): string => {
   return format(date, 'dd.MM.yyyy', { locale: ru });
@@ -22,7 +41,8 @@ export const getMonthsInYear = (year: number): Date[] => {
 };
 
 export const isDateInRange = (date: Date, startDate: Date, endDate: Date): boolean => {
-  return isWithinInterval(date, { start: startDate, end: endDate });
+  const day = toCalendarDate(date).getTime();
+  return day >= toCalendarDate(startDate).getTime() && day <= toCalendarDate(endDate).getTime();
 };
 
 export const generateCalendarForYear = (year: number): Date[][] => {
@@ -36,8 +56,7 @@ export const getCurrentYear = (): number => {
 
 // Calculate number of days between two dates (inclusive)
 export const getDaysCount = (startDate: Date, endDate: Date): number => {
-  // Add 1 to include both start and end dates in count
-  return differenceInDays(endDate, startDate) + 1;
+  return differenceInDays(toCalendarDate(endDate), toCalendarDate(startDate)) + 1;
 };
 
 // Check if a vacation period is in a specific year

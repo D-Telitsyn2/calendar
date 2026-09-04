@@ -1,7 +1,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, Timestamp, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { VacationPeriod } from '../types';
-import { isVacationInYear } from '../utils/dateUtils';
+import { fromStoredTimestamp, isVacationInYear, toCalendarDate, toStoredTimestamp } from '../utils/dateUtils';
 
 // Отпуска хранятся в коллекции vacations, с документами, которые содержат информацию о userId
 
@@ -14,8 +14,8 @@ interface FirebaseVacationData {
 
 const toFirebaseVacation = (vacation: Omit<VacationPeriod, 'id'>): FirebaseVacationData => {
   return {
-    startDate: Timestamp.fromDate(vacation.startDate),
-    endDate: Timestamp.fromDate(vacation.endDate),
+    startDate: Timestamp.fromDate(toStoredTimestamp(vacation.startDate)),
+    endDate: Timestamp.fromDate(toStoredTimestamp(vacation.endDate)),
     employeeId: vacation.employeeId,
     accountId: vacation.accountId
   };
@@ -26,8 +26,8 @@ const fromFirebaseVacation = (id: string, data: FirebaseVacationData): VacationP
     id,
     employeeId: data.employeeId,
     accountId: data.accountId,
-    startDate: data.startDate.toDate(),
-    endDate: data.endDate.toDate()
+    startDate: fromStoredTimestamp(data.startDate.toDate()),
+    endDate: fromStoredTimestamp(data.endDate.toDate())
   };
 };
 
@@ -57,7 +57,9 @@ export const addVacation = async (vacation: Omit<VacationPeriod, 'id'>): Promise
 
   return {
     id: docRef.id,
-    ...vacation
+    ...vacation,
+    startDate: toCalendarDate(vacation.startDate),
+    endDate: toCalendarDate(vacation.endDate)
   };
 };
 
@@ -66,11 +68,11 @@ export const updateVacation = async (id: string, vacationData: Partial<Omit<Vaca
   const updates: Record<string, Timestamp | string> = {};
 
   if (vacationData.startDate) {
-    updates.startDate = Timestamp.fromDate(vacationData.startDate);
+    updates.startDate = Timestamp.fromDate(toStoredTimestamp(vacationData.startDate));
   }
 
   if (vacationData.endDate) {
-    updates.endDate = Timestamp.fromDate(vacationData.endDate);
+    updates.endDate = Timestamp.fromDate(toStoredTimestamp(vacationData.endDate));
   }
 
   if (vacationData.employeeId) {
@@ -113,8 +115,8 @@ export const deleteEmployeeVacationsInYear = async (employeeId: string, accountI
   // Filter vacations by year and delete only those in the specified year
   const vacationsInYear = querySnapshot.docs.filter(document => {
     const data = document.data() as FirebaseVacationData;
-    const startDate = data.startDate.toDate();
-    const endDate = data.endDate.toDate();
+    const startDate = fromStoredTimestamp(data.startDate.toDate());
+    const endDate = fromStoredTimestamp(data.endDate.toDate());
     return isVacationInYear(startDate, endDate, year);
   });
 
