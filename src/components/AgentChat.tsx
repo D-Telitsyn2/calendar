@@ -134,7 +134,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
                 <Typography variant="caption" color={item.status === 'error' ? 'error' : 'text.secondary'}>
                   {item.status === 'pending' && 'Принято, скоро возьмём в работу'}
                   {(item.status === 'starting' || item.status === 'started') && 'Делаем'}
-                  {item.status === 'done' && 'Готово. Скоро появится на сайте'}
+                  {item.status === 'done' && 'Готово'}
                   {item.status === 'error' && 'Не получилось, напишите ещё раз'}
                 </Typography>
               </Box>

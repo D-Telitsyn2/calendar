@@ -119,9 +119,6 @@ async function refreshStarted(db, apiKey) {
       updates.prUrl = prUrl
     }
 
-    if (run.status === 'FINISHED') {
-      updates.status = 'done'
-    }
     if (run.status === 'ERROR' || run.status === 'EXPIRED' || run.status === 'CANCELLED') {
       updates.status = 'error'
     }
