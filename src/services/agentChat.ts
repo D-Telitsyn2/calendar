@@ -10,13 +10,13 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 
-export type AgentRequestStatus = 'pending' | 'starting' | 'started' | 'error'
+export type AgentRequestStatus = 'pending' | 'starting' | 'started' | 'done' | 'error'
 
 export interface AgentRequest {
   id: string
   message: string
   status: AgentRequestStatus
-  agentUrl?: string
+  prUrl?: string
   error?: string
   createdAtMs: number
 }
@@ -69,7 +69,7 @@ export function subscribeAgentRequests(
           id: docSnap.id,
           message: String(data.message || ''),
           status: (data.status || 'pending') as AgentRequestStatus,
-          agentUrl: typeof data.agentUrl === 'string' ? data.agentUrl : undefined,
+          prUrl: typeof data.prUrl === 'string' ? data.prUrl : undefined,
           error: typeof data.error === 'string' ? data.error : undefined,
           createdAtMs: data.createdAt?.toMillis?.() || Date.now()
         }

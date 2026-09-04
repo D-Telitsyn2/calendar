@@ -4,7 +4,6 @@ import {
   CircularProgress,
   Fab,
   IconButton,
-  Link,
   Paper,
   TextField,
   Typography
@@ -94,7 +93,7 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
     <>
       <Fab
         color="primary"
-        aria-label="Чат с агентом"
+        aria-label="Написать, что изменить"
         onClick={() => setOpen((value) => !value)}
         sx={{ position: 'fixed', right: 20, bottom: 20, zIndex: 20 }}
       >
@@ -119,10 +118,10 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
         >
           <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
             <Typography variant="subtitle1" fontWeight={600}>
-              Задача агенту
+              Что изменить на сайте
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Сообщение попадёт в очередь. GitHub запустит агента в течение нескольких минут, затем будет PR.
+              Напишите обычными словами. Правка уйдёт в работу сама, на сайт попадёт после проверки.
             </Typography>
           </Box>
 
@@ -138,23 +137,11 @@ const AgentChat = ({ accountId, email }: AgentChatProps) => {
                 <Paper variant="outlined" sx={{ p: 1.2, bgcolor: 'grey.50' }}>
                   <Typography variant="body2">{item.message}</Typography>
                 </Paper>
-                <Typography variant="caption" color="text.secondary">
-                  {item.status === 'pending' && 'В очереди, агент возьмёт задачу в ближайшие минуты'}
-                  {item.status === 'starting' && 'Запускаю агента…'}
-                  {item.status === 'started' && (
-                    <>
-                      Агент работает
-                      {item.agentUrl && (
-                        <>
-                          {' · '}
-                          <Link href={item.agentUrl} target="_blank" rel="noreferrer">
-                            открыть в Cursor
-                          </Link>
-                        </>
-                      )}
-                    </>
-                  )}
-                  {item.status === 'error' && (item.error || 'Ошибка запуска')}
+                <Typography variant="caption" color={item.status === 'error' ? 'error' : 'text.secondary'}>
+                  {item.status === 'pending' && 'Принято, скоро возьмём в работу'}
+                  {(item.status === 'starting' || item.status === 'started') && 'Делаем'}
+                  {item.status === 'done' && 'Готово. Скоро появится на сайте'}
+                  {item.status === 'error' && 'Не получилось, напишите ещё раз'}
                 </Typography>
               </Box>
             ))}
