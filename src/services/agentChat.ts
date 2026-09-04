@@ -73,7 +73,7 @@ export function subscribeAgentRequests(
             createdAtMs: data.createdAt?.toMillis?.() || Date.now()
           }
         })
-        .sort((left, right) => right.createdAtMs - left.createdAtMs)
+        .sort((left, right) => left.createdAtMs - right.createdAtMs)
       onChange(items)
     },
     (error) => {
